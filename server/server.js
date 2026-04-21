@@ -10,7 +10,9 @@ const redis = new Redis(process.env.REDIS_URL, {
   retryStrategy: (times) => Math.min(times * 50, 2000)
 });
 
-redis.on('error', (err) => console.error('!!! Redis Error:', err));
+redis.on('error', (err) => {
+  console.error('!!! Redis Error:', err.message);
+});
 redis.on('connect', () => console.log('>>> Connected to Redis'));
 redis.on('ready', () => console.log('>>> Redis Client Ready'));
 
@@ -32,18 +34,32 @@ const io = new Server(server, {
   }
 });
 
-// Redis persistence helpers
+// In-memory fallback for high-scale resilience
+const sessions = {};
+const socketToSession = {};
+
 const getSession = async (code) => {
-  const data = await redis.get(`session:${code}`);
-  return data ? JSON.parse(data) : null;
+  try {
+    if (redis.status === 'ready') {
+      const data = await redis.get(`session:${code}`);
+      if (data) return JSON.parse(data);
+    }
+  } catch (err) {
+    console.warn(`>>> Redis Get Failed, falling back to memory for ${code}`);
+  }
+  return sessions[code] || null;
 };
 
 const saveSession = async (code, session) => {
-  await redis.set(`session:${code}`, JSON.stringify(session), 'EX', 86400); // 24hr TTL
+  sessions[code] = session; // Always update memory
+  try {
+    if (redis.status === 'ready') {
+      await redis.set(`session:${code}`, JSON.stringify(session), 'EX', 86400);
+    }
+  } catch (err) {
+    console.warn(`>>> Redis Save Failed for ${code}`);
+  }
 };
-
-// Map to track which session a socket belongs to (for faster cleanup)
-const socketToSession = {};
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
