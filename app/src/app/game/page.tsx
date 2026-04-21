@@ -25,6 +25,12 @@ export default function GameDashboard() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (sessionData?.round) {
+      setShowBriefing(true);
+    }
+  }, [sessionData?.round]);
+
+  useEffect(() => {
     // WAIT FOR HYDRATION BEFORE DECIDING TO REDIRECT
     if (!hydrated) return;
 
@@ -45,7 +51,9 @@ export default function GameDashboard() {
       setErrorMessage(null);
       updateSessionData(data);
     });
-    socket.on('round_advanced', (data) => updateSessionData(data));
+    socket.on('round_advanced', (data) => {
+      updateSessionData(data);
+    });
     socket.on('sudden_challenge', (shock) => {
       alert(`⚠️ MARKET SHOCK: ${shock.title}\n\n${shock.description}`);
     });
@@ -88,61 +96,78 @@ export default function GameDashboard() {
         </div>
       )}
 
-      {/* MISSION BRIEFING MODAL */}
-      {showBriefing && sessionData.round === 1 && (
+      {/* SITUATION REPORT (SitRep) MODAL */}
+      {showBriefing && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <div className="max-w-2xl bg-slate-900 border border-indigo-500/30 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20">
-             <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-indigo-500/10 rounded-xl">
-                   <Target className="text-indigo-400 w-8 h-8" />
+          <div className="max-w-3xl bg-slate-900 border border-indigo-500/30 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20 overflow-hidden relative">
+             <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
+             
+             <div className="flex items-center gap-4 mb-8 relative">
+                <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                   <MessageSquare className="text-indigo-400 w-8 h-8" />
                 </div>
                 <div>
-                   <h2 className="text-3xl font-black italic tracking-tighter uppercase">Mission Briefing</h2>
-                   <p className="text-slate-500 text-xs font-mono uppercase tracking-widest leading-none mt-1">Role: Head of Total Rewards</p>
+                   <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-tight">
+                     Round {sessionData.round}: SitRep
+                   </h2>
+                   <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mt-1">Strategic Objective: {sessionData.round === 3 ? 'Formula Validation' : 'Performance Stabilization'}</p>
                 </div>
              </div>
 
-             <div className="space-y-6 text-slate-300">
-                <p className="text-lg leading-relaxed">
-                   Welcome to <span className="text-indigo-400 font-bold">CompSim Pro</span>. You have 6 rounds to transform the company's compensation strategy. 
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
-                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                      <div className="text-emerald-400 font-bold mb-1">HES Score</div>
-                      <p className="text-[10px] text-slate-500">Your total success metric. Balance budget vs. results.</p>
-                   </div>
-                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                      <div className="text-rose-500 font-bold mb-1">P-Value</div>
-                      <p className="text-[10px] text-slate-500">The "Parity Alarm". Stay above 0.05 to avoid legal audit.</p>
-                   </div>
-                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                      <div className="text-amber-400 font-bold mb-1">Retention</div>
-                      <p className="text-[10px] text-slate-500">Keep your persona attrition risk low to win.</p>
-                   </div>
+             <div className="space-y-6 text-slate-300 relative z-10">
+                <div className="bg-slate-950/50 border-l-4 border-indigo-500 p-6 rounded-r-2xl">
+                   <p className="text-xl leading-relaxed italic text-indigo-100 italic">
+                      "{challenges.find(c => c.round === sessionData.round)?.story || 'Stabilize the cohort metrics and prepare for market fluctuations.'}"
+                   </p>
                 </div>
 
-                <ul className="space-y-3 text-sm">
-                   <li className="flex items-start gap-2">
-                      <ChevronRight className="w-4 h-4 text-indigo-500 mt-0.5" />
-                      <span>Adjust the <span className="text-slate-100 font-bold underline decoration-indigo-500 decoration-2">Strategic Mix</span> sliders on the left.</span>
-                   </li>
-                   <li className="flex items-start gap-2">
-                      <ChevronRight className="w-4 h-4 text-indigo-500 mt-0.5" />
-                      <span>Check the <span className="text-slate-100 font-bold underline decoration-amber-500 decoration-2">Persona Hub</span> to see who is at risk.</span>
-                   </li>
-                   <li className="flex items-start gap-2">
-                       <ChevronRight className="w-4 h-4 text-indigo-500 mt-0.5" />
-                       <span>Watch the <span className="text-slate-100 font-bold underline decoration-emerald-500 decoration-2">Market Intel</span> feed for round-specific hooks.</span>
-                   </li>
-                </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                   <div className="space-y-4">
+                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Market Context</h3>
+                      <p className="text-sm leading-relaxed text-slate-400">
+                        Employees are watching your next move. {sessionData.round === 3 ? 'The Board is demanding technical proof of your strategy.' : 'Ensure you balance the budget while maintaining engagement.'}
+                      </p>
+                   </div>
+                   <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key KPIs to Watch</h3>
+                      <div className="flex justify-between items-center text-xs">
+                         <span>Human Equity Score</span>
+                         <span className="text-indigo-400 font-bold">{sessionData.players?.[myId]?.score || '--'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                         <span>Parity Risk (p)</span>
+                         <span className={currentMetrics.pValue < 0.05 ? 'text-rose-500' : 'text-emerald-400'}>{currentMetrics.pValue || '0.082'}</span>
+                      </div>
+                   </div>
+                </div>
              </div>
+
+             {/* FORMULA CHALLENGE FOR ROUND 3 */}
+             {sessionData.round === 3 && (
+                <div className="mt-8 p-6 bg-indigo-900/10 border border-indigo-500/30 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
+                   <h3 className="text-sm font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                      <Target className="w-5 h-5" /> Round 3 Formula Audit:
+                   </h3>
+                   <p className="text-xs text-slate-400 mb-4 italic">Confirm the standard formula for analyzing market competitiveness:</p>
+                   <div className="grid gap-2">
+                      {['Comp-Ratio = (Salary / Market Midpoint)', 'Pay Spread = (Max - Min) / Salary', 'Revenue Efficiency = FTE / GMV'].map((formula, idx) => (
+                        <button 
+                          key={idx}
+                          className="w-full text-left p-3 rounded-lg border border-slate-700 hover:border-indigo-500 hover:bg-indigo-500/10 transition text-xs font-mono flex items-center justify-between group"
+                        >
+                          {formula}
+                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      ))}
+                   </div>
+                </div>
+             )}
 
              <button 
                 onClick={() => setShowBriefing(false)}
-                className="w-full mt-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-indigo-500/20 transition group flex items-center justify-center"
+                className="w-full mt-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-indigo-500/20 active:scale-[0.98] transition group flex items-center justify-center"
              >
-                I AM READY TO DEPLOY <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                DEPLOY STRATEGY <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
              </button>
           </div>
         </div>
@@ -325,34 +350,69 @@ export default function GameDashboard() {
                 <div className="text-[9px] mt-1 text-slate-600">Cumulative Efficiency</div>
               </div>
            </section>
-        </div>
-
-        {/* Column 3: Market Intel & Ticker */}
+                {/* Column 3: Communication Center & Market Ticker */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
-           <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 h-full flex flex-col">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <TrendingUp className="text-emerald-400 w-5 h-5" /> Market Intelligence
-              </h2>
+           <section className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl">
+              <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex items-center justify-between">
+                 <h2 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                   <MessageSquare className="text-indigo-400 w-4 h-4" /> Comm Center
+                 </h2>
+                 <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-bold">LIVE FEED</span>
+              </div>
 
-              <div className="flex-grow space-y-4 overflow-auto max-h-[500px] pr-2">
-                 <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl">
-                    <div className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Round 01 Update</div>
-                    <p className="text-xs text-slate-400 leading-relaxed">Tech sector turnover up by 4% across the board. Talent market indices suggest a shift toward benefits and remote work credits.</p>
+              <div className="flex-grow p-4 space-y-4 overflow-auto bg-slate-900/30">
+                 {/* STORY MEMO */}
+                 <div className="bg-indigo-900/10 border-l-2 border-indigo-500 p-4 rounded-r-xl group hover:bg-indigo-900/20 transition-all cursor-default">
+                    <div className="text-[9px] font-black text-indigo-400 uppercase mb-1 tracking-tighter flex justify-between">
+                       <span>FROM: BOARD OF DIRECTORS</span>
+                       <span>PRIORITY: HIGH</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed font-serif italic">
+                       "{sessionData.round === 3 ? 'We require technical proof of your range spread calculations.' : 'The quarterly efficiency targets are non-negotiable. Projections show high risk.'}"
+                    </p>
                  </div>
-                 <div className="bg-slate-800/20 border border-slate-800/30 p-4 rounded-xl grayscale">
-                    <div className="text-[10px] font-bold text-slate-600 uppercase mb-1">Internal Chatter</div>
-                    <p className="text-xs text-slate-600 italic leading-relaxed">"The mid-level managers are starting to compare our bonus pool with the industry average."</p>
+
+                 {/* SLACK MESSAGE */}
+                 <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-slate-600 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                       <div className="w-5 h-5 rounded bg-amber-500 text-[10px] flex items-center justify-center font-bold text-slate-900">#</div>
+                       <span className="text-[10px] font-black text-slate-400 uppercase">#general-chatter</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 italic">
+                      "Heard rumors about the {sessionData.round === 4 ? 'equity audit' : 'new bonus pool'}. People are checking other offers already..."
+                    </p>
+                 </div>
+
+                 {/* INDUSTRY NEWS */}
+                 <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-inner">
+                    <div className="flex items-center gap-2 mb-2">
+                       <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center">
+                          <BarChart3 className="w-3 h-3 text-slate-500" />
+                       </div>
+                       <span className="text-[10px] font-black text-slate-300 uppercase italic">HR Market Intel</span>
+                    </div>
+                    <div className="space-y-3">
+                       <p className="text-[11px] text-slate-400 leading-tight">
+                         • Competitor X raises base pay by 12% in the tech sector.
+                       </p>
+                       <p className="text-[11px] text-slate-400 leading-tight">
+                         • Global inflation spikes; workforce demanding 'Cost of Living' adjustments.
+                       </p>
+                    </div>
                  </div>
               </div>
 
-              <div className="mt-8 pt-4 border-t border-slate-800">
-                <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-lg p-3">
-                   <div className="text-[10px] uppercase font-bold text-indigo-400 mb-1">PRO TIP</div>
-                   <p className="text-[11px] text-slate-400">Keep your P-Value above 0.05 to avoid legal penalties in the next round audit.</p>
+              <div className="p-4 bg-slate-950/50 border-t border-slate-800">
+                <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-lg p-3">
+                   <div className="text-[9px] uppercase font-black text-emerald-400 mb-1">Strategic Advice</div>
+                   <p className="text-[10px] text-slate-500 italic leading-snug">
+                     {sessionData.round === 3 ? 'Ensure your Comp-Ratio logic is defensible.' : 'Higher base pay reduces immediate churn but hits ROI hard.'}
+                   </p>
                 </div>
               </div>
            </section>
         </div>
+ </div>
 
       </main>
 
