@@ -1,12 +1,33 @@
+export const CASE_STUDY_BRIEFING = {
+  end_goal: "To architect a sustainable, high-growth compensation framework that maximizes 'Talent Density' and 'Internal Equity' while maintaining the fiscal discipline required for the upcoming Q6 IPO Certification.",
+  role_mandate: "As Chief People Officer (CPO), you represent the bridge between Board-level fiscal constraints and ground-level talent engagement. Your success is measured by the Human Equity Score (Engagement + Parity) vs. Budget Efficiency.",
+  strategic_roadmap: {
+    1: "Talent Baseline: Conduct a parity audit and stabilize the initial budget utilization.",
+    2: "Performance Overhaul: Solve the 'Sales Plateau' by introducing strategic variable pay levers.",
+    3: "Internal Equity: Mitigate 'Sector Jealousy' between Tech and Operations departments.",
+    4: "Crisis Management: Combat international poaching threats (The Dubai Offer) with specific retention pools.",
+    5: "Executive Agency: Prepare the top-tier leadership for IPO scrutiny by aligning LTI with long-term goals.",
+    6: "IPO Certification: Pass the final Board audit for organizational sustainability."
+  },
+  glossary: [
+    { term: "Comp-Ratio", definition: "The ratio of an employee's salary to the market median. A ratio of 1.0 means pay is perfectly aligned with the market." },
+    { term: "Parity (p-value)", definition: "Statistical measure of pay fairness. A p-value < 0.05 suggests a 'Fault Line' (potential bias) that must be addressed." },
+    { term: "Sales Accelerator", definition: "An exponential increase in commission rates once an employee exceeds 100% of their target." },
+    { term: "LTI / RSU", definition: "Stock options or restricted units that vest over time, aligning employees with long-term company value." },
+    { term: "OTE (On-Target Earnings)", definition: "The total expected pay (Base + Bonus) when a 100% performance target is achieved." },
+    { term: "Agency Problem", definition: "Occurs when managers prioritize short-term personal bonuses over the long-term health of the firm." }
+  ]
+};
+
 export const NARRATIVE_DOSSIER = {
   ceo_memo: {
-    title: "BharatQuick: The Mid-Year Reckoning",
+    title: "Project Phoenix: Mid-Year Executive Mandate",
     author: "Ishaan Kapur, Group CEO",
-    content: `Team, the board has been breathing down my neck. We are growing at 30% month-on-month, but our 'Quick-Commerce' division is leaking money and people. 
+    content: `Colleagues, we are at a strategic crossroads. BharatQuick is expanding at an 18-month compressed growth cycle, but our 'Quick-Commerce' logic is failing at the human level. 
 
-We need to decide: are we a high-growth Disruptor or a legacy FMCG giant? Our pay strategy reflects our identity. If we want to win in Bangalore, we can't pay Mysore rates. But if we pay Bangalore rates across the board, we'll be bankrupt by Q3. 
+The Board is concerned about 'Talent Density.' We aren't just losing people; we are losing the *wrong* people to international rivals. Our pay strategy is currently a 'Legacy fixed-cost model' in a 'Disruptor market.' 
 
-I don't need you to tell me the 'standard merit increment.' I need you to tell me how we stop our competitors from stealing our core. Handle it.`
+I expect you to modernize our Total Rewards framework. Don't give me cost-of-living adjustments—give me a strategy that makes our top individual contributors untouchable by competitors while fixing the internal equity gaps that create departmental friction. The IPO clock is ticking.`
   },
   board_intercept: {
     title: "CONFIDENTIAL: Internal Board Summary",

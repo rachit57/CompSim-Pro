@@ -23,6 +23,7 @@ export default function GameDashboard() {
 
   const [activeTab, setActiveTab] = useState<'briefing' | 'workforce' | 'market' | 'execution'>('briefing');
   const [promotedEmployees, setPromotedEmployees] = useState<string[]>([]);
+  const [interviewedIds, setInterviewedIds] = useState<string[]>([]);
   const [showBriefing, setShowBriefing] = useState(true);
   const [selectedPulse, setSelectedPulse] = useState<{name: string, quote: string} | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -30,6 +31,8 @@ export default function GameDashboard() {
   useEffect(() => {
     if (sessionData?.round) {
       setShowBriefing(true);
+      setInterviewedIds([]); // Reset quotas for new round
+      setPromotedEmployees([]);
     }
   }, [sessionData?.round]);
 
@@ -94,9 +97,29 @@ export default function GameDashboard() {
   };
 
   const togglePromotion = (id: string) => {
-    setPromotedEmployees(prev => 
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
+    setPromotedEmployees(prev => {
+      if (prev.includes(id)) return prev.filter(p => p !== id);
+      if (prev.length >= 2) {
+        alert("Board Alert: Promotion Headcount Quota for this round reached (Limit: 2).");
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const handleInterview = (emp: any) => {
+    if (interviewedIds.includes(emp.id)) {
+      setSelectedPulse({ name: emp.name, quote: EMPLOYEE_PULSE[sessionData.round as keyof typeof EMPLOYEE_PULSE]?.[emp.id] || "No further confidential info at this level." });
+      return;
+    }
+    
+    if (interviewedIds.length >= 4) {
+      alert("Executive Bandwidth Alert: You can only conduct 4 confidential interviews per round.");
+      return;
+    }
+
+    setInterviewedIds(prev => [...prev, emp.id]);
+    setSelectedPulse({ name: emp.name, quote: EMPLOYEE_PULSE[sessionData.round as keyof typeof EMPLOYEE_PULSE]?.[emp.id] || "Employee has no confidential feedback this round." });
   };
 
   return (
@@ -122,7 +145,7 @@ export default function GameDashboard() {
                    <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-tight">
                      Round {sessionData.round}: SitRep
                    </h2>
-                   <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mt-1">Strategic Objective: Decision Execution</p>
+                    <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mt-1">Strategic Objective: {CASE_STUDY_BRIEFING.strategic_roadmap[sessionData.round as keyof typeof CASE_STUDY_BRIEFING.strategic_roadmap] || 'Performance Stabilization'}</p>
                 </div>
              </div>
 
@@ -188,6 +211,12 @@ export default function GameDashboard() {
         {activeTab === 'briefing' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
              <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
+                <section className="bg-indigo-900/10 border-l-4 border-l-indigo-500 p-8 rounded-r-3xl">
+                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Simulation Goal</h3>
+                   <h2 className="text-2xl font-black italic mb-4 uppercase tracking-tighter">IPO Certification</h2>
+                   <p className="text-slate-300 text-sm leading-relaxed font-serif">{CASE_STUDY_BRIEFING.end_goal}</p>
+                </section>
+
                 <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-4 opacity-5"><MessageSquare className="w-32 h-32" /></div>
                    <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Direct Communication</h3>
@@ -195,24 +224,44 @@ export default function GameDashboard() {
                    <div className="text-slate-500 text-[10px] font-mono mb-4 uppercase">Sender: {NARRATIVE_DOSSIER.ceo_memo.author}</div>
                    <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.ceo_memo.content}</p>
                 </section>
+
+                <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl">
+                   <h3 className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Executive Glossary</h3>
+                   <div className="space-y-4 pt-4">
+                      {CASE_STUDY_BRIEFING.glossary.map((item, idx) => (
+                        <div key={idx} className="border-l border-slate-700 pl-3">
+                           <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{item.term}</div>
+                           <div className="text-xs text-slate-400 leading-relaxed">{item.definition}</div>
+                        </div>
+                      ))}
+                   </div>
+                </section>
+             </div>
+
+             <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
                 <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
                    <h3 className="text-rose-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Internal Intel</h3>
                    <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">{NARRATIVE_DOSSIER.board_intercept.title}</h2>
                    <div className="text-slate-500 text-[10px] font-mono mb-4 uppercase">Source: {NARRATIVE_DOSSIER.board_intercept.author}</div>
                    <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.board_intercept.content}</p>
                 </section>
-             </div>
-             <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
+
                 <section className="bg-slate-950/50 border border-amber-500/20 p-8 rounded-3xl border-l-4 border-l-amber-500">
-                   <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Market Intelligence</h3>
-                   <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter underline decoration-amber-500 underline-offset-8">{NARRATIVE_DOSSIER.market_gossip.title}</h2>
-                   <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-line font-mono mt-4">{NARRATIVE_DOSSIER.market_gossip.content}</p>
+                   <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Strategic Roadmap</h3>
+                   <div className="space-y-4 pt-4">
+                      {Object.entries(CASE_STUDY_BRIEFING.strategic_roadmap).map(([r, task]) => (
+                        <div key={r} className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${Number(r) === sessionData.round ? 'bg-amber-500/10 border border-amber-500/20' : 'opacity-40'}`}>
+                           <div className={`w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-black ${Number(r) === sessionData.round ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40' : 'bg-slate-800'}`}>{r}</div>
+                           <div className="text-xs text-slate-300 leading-tight pt-1">{task}</div>
+                        </div>
+                      ))}
+                   </div>
                 </section>
-                <section className="bg-indigo-900/10 border border-indigo-500/20 p-8 rounded-3xl border-dashed">
-                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Operational Protocol</h3>
-                   <h2 className="text-xl font-black italic mb-4 uppercase tracking-tighter">Instructions</h2>
+
+                <section className="bg-slate-950/50 border border-indigo-500/20 p-8 rounded-3xl border-dashed">
+                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Mission Context</h3>
                    <p className="text-slate-400 text-xs leading-relaxed italic">
-                      "Data in the 'Market Intel' tab is raw intelligence. Use the 'Workforce Hub' to conduct 1-on-1s. Real strategic insights aren't found in benchmarks—they are found in conversations. Trust your deduction, not just your budget."
+                      "Success in this simulation is not about finding a single 'right' number. It is about balancing the competing interests of individual stars, collective fairness, and corporate sustainability."
                    </p>
                 </section>
              </div>
@@ -229,12 +278,16 @@ export default function GameDashboard() {
                 </div>
                 <div className="flex gap-4">
                    <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-700 text-center">
-                      <div className="text-[8px] text-slate-500 font-black uppercase">Cohort Avg CR</div>
-                      <div className="text-sm font-bold text-indigo-400">0.94</div>
+                      <div className="text-[8px] text-slate-500 font-black uppercase tracking-tighter">Bandwidth (Interviews)</div>
+                      <div className={`text-sm font-bold ${interviewedIds.length >= 4 ? 'text-rose-500' : 'text-indigo-400'}`}>
+                         {4 - interviewedIds.length} / 4 Left
+                      </div>
                    </div>
-                   <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-700 text-center text-rose-500">
-                      <div className="text-[8px] text-slate-500 font-black uppercase">Green Circles</div>
-                      <div className="text-sm font-bold animate-pulse">03</div>
+                   <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-700 text-center">
+                      <div className="text-[8px] text-slate-500 font-black uppercase tracking-tighter">Quota (Promotions)</div>
+                      <div className={`text-sm font-bold ${promotedEmployees.length >= 2 ? 'text-rose-500' : 'text-emerald-400'}`}>
+                         {2 - promotedEmployees.length} / 2 Left
+                      </div>
                    </div>
                 </div>
              </div>
@@ -283,18 +336,15 @@ export default function GameDashboard() {
                            </td>
                            <td className="p-4 text-right">
                               <div className="flex justify-end gap-2 text-right">
-                                <button 
-                                  onClick={() => {
-                                    const quote = EMPLOYEE_PULSE[sessionData.round]?.[emp.id] || "Everything seems fine for now. We are just waiting to see the next merit cycle.";
-                                    setSelectedPulse({ name: emp.name, quote });
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition"
-                                >
-                                   1-on-1
-                                </button>
+                                 <button 
+                                   onClick={() => handleInterview(emp)}
+                                   className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition ${interviewedIds.includes(emp.id) ? 'bg-indigo-600 text-white border-none' : (interviewedIds.length >= 4 ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20')}`}
+                                 >
+                                    {interviewedIds.includes(emp.id) ? 'Interviewed' : '1-on-1'}
+                                 </button>
                                 <button 
                                   onClick={() => togglePromotion(emp.id)}
-                                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition ${promotedEmployees.includes(emp.id) ? 'bg-emerald-600 text-white border-none' : 'bg-transparent border border-slate-700 text-slate-400 hover:border-indigo-500'}`}
+                                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition ${promotedEmployees.includes(emp.id) ? 'bg-emerald-600 text-white border-none' : (promotedEmployees.length >= 2 ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' : 'bg-transparent border border-slate-700 text-slate-400 hover:border-indigo-500')}`}
                                 >
                                    {promotedEmployees.includes(emp.id) ? 'Promoted' : 'Promote'}
                                 </button>

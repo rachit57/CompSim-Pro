@@ -146,6 +146,7 @@ io.on('connection', (socket) => {
 
     await saveSession(sessionCode, session);
     io.to(sessionCode).emit('round_advanced', session);
+    io.to(sessionCode).emit('session_update', session);
   });
 
   socket.on('inject_shock', ({ sessionCode, targetId, shockId }) => {
