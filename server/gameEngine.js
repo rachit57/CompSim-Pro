@@ -1,71 +1,110 @@
+const { workforce } = require('./indiaWorkforce');
+
 /**
- * MBA-HR Strategic Calculation Engine
- * 
- * Metrics:
- * - HES (Human Equity Score): Strategic success indicator (0-100)
- * - P-Value: Statistical significance of pay parity gaps (warning < 0.05)
- * - Attrition Risk: Probability of persona turnover
+ * ELITE HR CALCULATION ENGINE (BharatQuick Edition)
+ * Theories:
+ * - EQUITY THEORY: Attrition risk increases if comp-ratio is lower than high-performing peers.
+ * - EXPECTANCY THEORY: Motivation drops if merit increase < performance tier.
+ * - AGENCY THEORY: Executive retention linked to LTI/STI balance.
  */
 
-function calculateParityPValue(decisions) {
-  // Simulates a t-test result for gender/race pay gaps.
-  // Higher "Equality Debt" from previous rounds or low "D&I Investment" drops the p-value.
-  const parityInvestment = decisions.parityAdj || 0;
-  const baseRisk = 0.08; // Normal variation
-  const pValue = Math.max(0.001, baseRisk + (parityInvestment * 2) - (Math.random() * 0.05));
-  return parseFloat(pValue.toFixed(3));
-}
-
-function calculateHES(metrics) {
-  const { budgetUtil, turnover, engagement, pValue, roi } = metrics;
-  
-  // Parity Penalty
-  const parityPenalty = pValue < 0.05 ? 40 : 0;
-  
-  // Budget Variance (Peak at 98% utilization)
-  let budgetScore = 100 - Math.abs(0.98 - budgetUtil) * 500;
-  budgetScore = Math.max(0, Math.min(100, budgetScore));
-
-  const total = (0.35 * budgetScore) + (0.25 * engagement * 100) + (0.20 * (100 - turnover * 100)) + (0.20 * roi * 100) - parityPenalty;
-  return Math.max(0, Math.min(100, total)).toFixed(2);
+function calculateCompRatio(salary, marketMid) {
+  return parseFloat((salary / marketMid).toFixed(2));
 }
 
 function processRound(decisions, prevMetrics, themeConfig) {
-  // 4 Personas: Tech, Leadership, Mid-Level, Junior
-  const { basePayAdj, variablePay, benefits, parityAdj } = decisions;
+  // decisions: { meritPool: 0.1, salesAcc: 1.5, ltiMix: 0.3, parityPool: 500000, promotions: [] }
+  const { meritPool = 0.08, salesAcc = 1.0, ltiMix = 0.2, parityPool = 0, promotions = [] } = decisions;
+
+  let totalBudgetUsed = 0;
+  let totalPerformanceValue = 0;
+  let totalEquityDistance = 0;
+  let employeeOutcomes = [];
+
+  // Calculate Departmental Averages for Equity Theory
+  const deptStats = {};
+  workforce.forEach(e => {
+    if (!deptStats[e.dept]) deptStats[e.dept] = { totalCR: 0, count: 0 };
+    deptStats[e.dept].totalCR += calculateCompRatio(e.currentPay, e.marketMid);
+    deptStats[e.dept].count++;
+  });
+
+  const cityRiskMultipliers = { 1: 1.5, 2: 1.2, 3: 1.0, 4: 0.8 };
+
+  workforce.forEach(emp => {
+    let salary = emp.currentPay;
+    let cr = calculateCompRatio(salary, emp.marketMid);
+    let avgDeptCR = deptStats[emp.dept].totalCR / deptStats[emp.dept].count;
+
+    // 1. APPLY DECISIONS
+    let increase = meritPool * (emp.performance / 3); // Merit Linkage
+    if (promotions.includes(emp.id)) {
+      increase += 0.15; // Promotion Bump
+      salary *= 1.15;
+    }
+    salary *= (1 + increase);
+    totalBudgetUsed += (salary - emp.currentPay);
+
+    // 2. THEORY-BASED ATTRITION
+    // Equity Theory: Feeling "Underpaid" compared to peers
+    const equityGap = Math.max(0, avgDeptCR - cr);
+    totalEquityDistance += equityGap;
+
+    // Expectancy Theory: Link between Perf and Raise
+    const expectancyGap = Math.max(0, (emp.performance / 5) - increase);
+
+    // Market Pressure (City Tiers)
+    const marketPressure = cityRiskMultipliers[emp.tier] || 1;
+
+    // Base Risk Calibrated
+    let attritionRisk = 0.05 + (equityGap * 2) + (expectancyGap * 0.5);
+    attritionRisk *= marketPressure;
+
+    // Specific Mechanics
+    if (emp.type === 'sales') {
+      // Sales Accelerator impact
+      const salesIncentive = emp.achievement > 1 ? (salesAcc * 0.1) : 0;
+      attritionRisk -= salesIncentive;
+    }
+    if (emp.type === 'executive') {
+      // Agency Theory: LTI retention
+      attritionRisk -= (ltiMix * 0.4);
+    }
+
+    attritionRisk = Math.max(0.01, Math.min(0.9, attritionRisk));
+
+    employeeOutcomes.push({
+      id: emp.id,
+      newPay: Math.round(salary),
+      cr: calculateCompRatio(salary, emp.marketMid),
+      attritionRisk,
+      performance: emp.performance
+    });
+
+    totalPerformanceValue += emp.performance * (1 - attritionRisk);
+  });
+
+  // AGGREGATE METRICS
+  const avgTurnover = employeeOutcomes.reduce((acc, curr) => acc + curr.attritionRisk, 0) / workforce.length;
+  const budgetUtil = (totalBudgetUsed + parityPool) / 10000000; // Scaled
+  const pValue = Math.max(0.01, 0.08 + (parityPool / 1000000) - (Math.random() * 0.05));
   
-  // MBA Level Logic: Different reward mixes attract different personas
-  // Tech: Sensitive to Base Pay & Variable Pay
-  // Leadership: Sensitive to variable pay (LTI/Options)
-  // Junior: Sensitive to wellbeing & growth
-  
-  const basePayWeight = themeConfig.industryModifiers.basePayImportance || 1;
-  
-  // 1. Calculate Attrition Risk per Persona
-  const personaRisk = {
-    tech: Math.max(0.02, 0.15 - (basePayAdj * 0.8) - (variablePay * 0.2)),
-    leadership: Math.max(0.01, 0.08 - (variablePay * 1.5)),
-    junior: Math.max(0.05, 0.20 - (basePayAdj * 0.2) - (benefits === 'premium' ? 0.1 : 0.02))
+  const metrics = {
+    budgetUtil: parseFloat(budgetUtil.toFixed(2)),
+    turnover: parseFloat(avgTurnover.toFixed(3)),
+    engagement: parseFloat((1 - avgTurnover).toFixed(2)),
+    pValue: parseFloat(pValue.toFixed(3)),
+    roi: parseFloat((totalPerformanceValue / 50).toFixed(2)),
+    outcomes: employeeOutcomes
   };
 
-  const avgTurnover = (personaRisk.tech + personaRisk.leadership + personaRisk.junior) / 3;
-  const engagement = 0.6 + (basePayAdj * 0.5) + (benefits === 'premium' ? 0.2 : 0);
-  const budgetUtil = 0.90 + (basePayAdj * 0.6) + (variablePay * 0.3) + (parityAdj * 0.2);
-  const pValue = calculateParityPValue(decisions);
-  const roi = 0.5 + (engagement * 0.4) - (avgTurnover * 0.5);
-
-  const metrics = { 
-    budgetUtil: parseFloat(budgetUtil.toFixed(2)), 
-    turnover: parseFloat(avgTurnover.toFixed(3)), 
-    engagement: parseFloat(Math.min(1, engagement).toFixed(2)), 
-    pValue,
-    roi: parseFloat(Math.min(1, roi).toFixed(2)),
-    personaRisk
+  // HES Calculation (Balanced Scorecard)
+  const hesValue = (metrics.engagement * 30) + (metrics.roi * 30) + (Math.max(0, 100 - metrics.turnover * 400) * 0.2) + (metrics.pValue > 0.05 ? 20 : 5);
+  
+  return { 
+    hes: Math.min(100, hesValue).toFixed(2), 
+    metrics 
   };
-
-  const hes = calculateHES(metrics);
-
-  return { hes, metrics };
 }
 
-module.exports = { calculateHES, processRound, calculateParityPValue };
+module.exports = { processRound };

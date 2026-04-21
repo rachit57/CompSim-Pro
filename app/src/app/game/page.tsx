@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { socket } from '@/lib/socketClient';
 import { useGameStore } from '@/lib/store';
-import { ROUND_STORIES, FORMULA_OPTIONS } from '@/lib/narrative';
+import { ROUND_STORIES, FORMULA_OPTIONS, NARRATIVE_DOSSIER } from '@/lib/narrative';
 import { 
   Activity, Users, DollarSign, TrendingUp, AlertTriangle, 
   ChevronRight, Zap, Target, BarChart3, MessageSquare 
@@ -15,14 +15,15 @@ export default function GameDashboard() {
   const { sessionCode, role, playerName, sessionData, updateSessionData, hydrated } = useGameStore();
   
   const [decisions, setDecisions] = useState({
-    basePayAdj: 0.05,
-    variablePay: 0.10,
-    benefits: 'standard',
-    parityAdj: 0.02
+    meritPool: 0.08,
+    salesAcc: 1.0,
+    ltiMix: 0.2,
+    parityPool: 0
   });
 
+  const [activeTab, setActiveTab] = useState<'briefing' | 'workforce' | 'market' | 'execution'>('briefing');
+  const [promotedEmployees, setPromotedEmployees] = useState<string[]>([]);
   const [showBriefing, setShowBriefing] = useState(true);
-  const [activePersona, setActivePersona] = useState('tech');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,7 +85,17 @@ export default function GameDashboard() {
   );
 
   const handleSubmit = () => {
-    socket.emit('submit_decision', { sessionCode, decisions });
+    socket.emit('submit_decision', { 
+      sessionCode, 
+      decisions: { ...decisions, promotions: promotedEmployees } 
+    });
+    alert("Strategic Plan Deployed to HQ.");
+  };
+
+  const togglePromotion = (id: string) => {
+    setPromotedEmployees(prev => 
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -172,247 +183,302 @@ export default function GameDashboard() {
         </div>
       )}
 
-      <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-800 pb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
-            <h1 className="text-2xl font-black tracking-tighter uppercase italic">CompSim <span className="text-indigo-500">Pro</span></h1>
-          </div>
-          <p className="text-slate-500 text-xs font-mono uppercase tracking-widest leading-none">
-            {playerName} | {role} | {sessionCode}
-          </p>
-        </div>
+      {/* TOP NAVIGATION TABS */}
+      <nav className="max-w-7xl mx-auto flex bg-slate-900 border border-slate-800 rounded-2xl p-1 mb-8 shadow-inner">
+         {[
+           { id: 'briefing', label: 'Strategic Dossier', icon: MessageSquare },
+           { id: 'workforce', label: 'Workforce Hub', icon: Users },
+           { id: 'market', label: 'Market Intel', icon: BarChart3 },
+           { id: 'execution', label: 'Strategic Console', icon: Zap },
+         ].map((tab) => (
+           <button
+             key={tab.id}
+             onClick={() => setActiveTab(tab.id as any)}
+             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+           >
+             <tab.icon className="w-4 h-4" /> {tab.label}
+           </button>
+         ))}
+      </nav>
+
+      <main className="max-w-7xl mx-auto min-h-[600px]">
         
-        <div className="flex gap-4 items-center">
-          <button 
-            onClick={() => setShowBriefing(true)}
-            className="p-2 hover:bg-slate-800 rounded-full transition text-slate-500 hover:text-indigo-400"
-            title="View Mission Briefing"
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
-          <div className="text-right">
-             <div className="text-4xl font-black text-slate-200">ROUND 0{sessionData.round || 1}</div>
-             <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.2em]">System Status: {sessionData.status}</div>
+        {/* TAB 1: STRATEGIC DOSSIER (THE STORY) */}
+        {activeTab === 'briefing' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
+                <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-4 opacity-5"><MessageSquare className="w-32 h-32" /></div>
+                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Internal Communication</h3>
+                   <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">{NARRATIVE_DOSSIER.ceo_memo.title}</h2>
+                   <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.ceo_memo.content}</p>
+                </section>
+                <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
+                   <h3 className="text-rose-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Financial Guardrails</h3>
+                   <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">{NARRATIVE_DOSSIER.cfo_memo.title}</h2>
+                   <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.cfo_memo.content}</p>
+                </section>
+             </div>
+             <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
+                <section className="bg-slate-950/50 border border-indigo-500/20 p-8 rounded-3xl border-l-4 border-l-indigo-500">
+                   <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">The C&B Bible</h3>
+                   <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter underline decoration-indigo-500 underline-offset-8">Theory Foundation</h2>
+                   <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-line">{NARRATIVE_DOSSIER.theory_intel.content}</p>
+                </section>
+                <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl">
+                   <h3 className="text-emerald-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Governance</h3>
+                   <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">{NARRATIVE_DOSSIER.board_mandate.title}</h2>
+                   <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.board_mandate.content}</p>
+                </section>
+             </div>
           </div>
-          <div className="h-12 w-[1px] bg-slate-800 mx-2" />
-          <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-             <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Live HES Index</div>
-             <div className="text-2xl font-mono text-emerald-400 font-bold">{myPlayer?.score || '72.4'}</div>
+        )}
+
+        {/* TAB 2: WORKFORCE HUB (INDIVIDUAL AUDIT) */}
+        {activeTab === 'workforce' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-right-4 duration-500">
+             <div className="p-6 bg-slate-800/50 flex justify-between items-center border-b border-slate-700">
+                <div>
+                   <h2 className="text-xl font-black italic uppercase italic">Salary & Equity Audit</h2>
+                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Real-time Employee Master File | Case Study: BharatQuick</p>
+                </div>
+                <div className="flex gap-4">
+                   <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-700 text-center">
+                      <div className="text-[8px] text-slate-500 font-black uppercase">Cohort Avg CR</div>
+                      <div className="text-sm font-bold text-indigo-400">0.94</div>
+                   </div>
+                   <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-700 text-center text-rose-500">
+                      <div className="text-[8px] text-slate-500 font-black uppercase">Green Circles</div>
+                      <div className="text-sm font-bold animate-pulse">03</div>
+                   </div>
+                </div>
+             </div>
+             <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                   <thead className="bg-slate-950 text-[10px] uppercase text-slate-500 font-black tracking-widest leading-none border-b border-slate-800">
+                      <tr>
+                         <th className="p-4">Employee/Role</th>
+                         <th className="p-4">Grade</th>
+                         <th className="p-4">Location</th>
+                         <th className="p-4 text-center">Perf (1-5)</th>
+                         <th className="p-4">Current Salary</th>
+                         <th className="p-4">Comp-Ratio</th>
+                         <th className="p-4">Status</th>
+                         <th className="p-4 text-right">Actions</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      {(sessionData?.workforce || []).map((emp: any) => (
+                        <tr key={emp.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition group">
+                           <td className="p-4">
+                              <div className="font-bold text-slate-200">{emp.name}</div>
+                              <div className="text-[10px] text-slate-500 uppercase">{emp.role}</div>
+                           </td>
+                           <td className="p-4 font-mono text-xs">{emp.level}</td>
+                           <td className="p-4">
+                              <div className="text-xs text-slate-300">{emp.city}</div>
+                              <div className="text-[9px] text-slate-600 uppercase font-black tracking-tighter">Tier {emp.tier} City</div>
+                           </td>
+                           <td className="p-4 text-center">
+                              <span className={`px-3 py-1 rounded-full text-xs font-black ${emp.performance >= 4 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400'}`}>
+                                 {emp.performance}
+                              </span>
+                           </td>
+                           <td className="p-4 font-mono text-sm">₹{(emp.currentPay/100000).toFixed(1)}L</td>
+                           <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                 <span className="font-mono text-xs text-indigo-400">{(emp.currentPay/emp.marketMid).toFixed(2)}</span>
+                                 <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500" style={{width: `${(emp.currentPay/emp.marketMid)*100}%`}} />
+                                 </div>
+                              </div>
+                           </td>
+                           <td className="p-4">
+                              {emp.currentPay/emp.marketMid < 0.85 ? <span className="text-[8px] bg-rose-500/20 text-rose-500 px-2 py-0.5 rounded uppercase font-black animate-pulse">Green Circle</span> : <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded uppercase font-black">Stable</span>}
+                           </td>
+                           <td className="p-4 text-right">
+                              <button 
+                                onClick={() => togglePromotion(emp.id)}
+                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition ${promotedEmployees.includes(emp.id) ? 'bg-emerald-600 text-white border-none' : 'bg-transparent border border-slate-700 text-slate-400 hover:border-indigo-500'}`}
+                              >
+                                 {promotedEmployees.includes(emp.id) ? 'Promoted' : 'Promote'}
+                              </button>
+                           </td>
+                        </tr>
+                      ))}
+                   </tbody>
+                </table>
+             </div>
           </div>
-        </div>
-      </header>
+        )}
 
-      <main className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
-        
-        {/* Column 1: Strategic Decisions */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Target className="w-24 h-24" />
-            </div>
-            
-            <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Zap className="text-amber-400 w-5 h-5" /> Reward Strategy Mix
-            </h2>
-
-            <div className="space-y-8">
-              {/* Sliders */}
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
-                  <span>Base Salary Adj.</span>
-                  <span className="text-indigo-400">+{Math.round(decisions.basePayAdj * 100)}%</span>
+        {/* TAB 3: MARKET INTEL (BENCHMARKS) */}
+        {activeTab === 'market' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-left-4 duration-500">
+             <section className="lg:col-span-2 space-y-6">
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-xl">
+                   <h2 className="text-xl font-black italic uppercase mb-6 flex items-center gap-2">
+                      <BarChart3 className="text-indigo-400 w-6 h-6" /> Geographic Market Benchmarks (P50)
+                   </h2>
+                   <div className="space-y-6">
+                      {[
+                        { tier: 'Tier 1 (Mumbai/BLR)', staff: '₹18-25L', sales: '₹12L + Acc', exec: '₹60-90L' },
+                        { tier: 'Tier 2 (Pune/HYD)', staff: '₹12-18L', sales: '₹8L + Acc', exec: '₹45-60L' },
+                        { tier: 'Tier 3 (Jaipur/Kochi)', staff: '₹6-10L', sales: '₹5L + Acc', exec: '₹30-40L' },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-slate-800 hover:border-indigo-500 transition-colors">
+                           <span className="font-bold text-slate-200">{item.tier}</span>
+                           <div className="flex gap-6 text-xs font-mono">
+                              <span className="text-slate-500">Staff: <b className="text-indigo-400">{item.staff}</b></span>
+                              <span className="text-slate-500">Sales: <b className="text-emerald-400">{item.sales}</b></span>
+                              <span className="text-slate-500">Exec: <b className="text-amber-400">{item.exec}</b></span>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
                 </div>
-                <input 
-                  type="range" min="0" max="0.25" step="0.01" value={decisions.basePayAdj}
-                  onChange={(e) => setDecisions({...decisions, basePayAdj: parseFloat(e.target.value)})}
-                  className="w-full accent-indigo-500"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
-                  <span>Var. Pay Pool</span>
-                  <span className="text-indigo-400">{Math.round(decisions.variablePay * 100)}%</span>
+             </section>
+             <section className="bg-slate-900 border border-slate-800 p-8 rounded-3xl relative overflow-hidden group">
+                <div className="absolute -bottom-10 -right-10 opacity-5 group-hover:opacity-10 transition-opacity"><Activity className="w-48 h-48" /></div>
+                <h3 className="text-lg font-black italic mb-6 uppercase">Market Outlook</h3>
+                <div className="space-y-6">
+                   <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                      <h4 className="text-xs font-black text-rose-500 uppercase mb-2">High Volatility</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">Tech leads in Metros are demanding 'Equity' parity with US/Global salaries. Retention costs expected to rise by 15%.</p>
+                   </div>
+                   <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                      <h4 className="text-xs font-black text-emerald-500 uppercase mb-2">Geo-Op Opportunity</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">Tier 3 cities (Jaipur, Indore) showing high productivity with 40% lower compensation overhead.</p>
+                   </div>
                 </div>
-                <input 
-                  type="range" min="0" max="0.40" step="0.02" value={decisions.variablePay}
-                  onChange={(e) => setDecisions({...decisions, variablePay: parseFloat(e.target.value)})}
-                  className="w-full accent-indigo-500"
-                />
-              </div>
+             </section>
+          </div>
+        )}
 
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
-                  <span>Equity Correction</span>
-                  <span className="text-emerald-400">+{Math.round(decisions.parityAdj * 100)}%</span>
-                </div>
-                <input 
-                  type="range" min="0" max="0.10" step="0.01" value={decisions.parityAdj}
-                  onChange={(e) => setDecisions({...decisions, parityAdj: parseFloat(e.target.value)})}
-                  className="w-full accent-emerald-500"
-                />
-              </div>
+        {/* TAB 4: STRATEGIC CONSOLE (EXECUTION) */}
+        {activeTab === 'execution' && (
+          <div className="grid grid-cols-12 gap-8 animate-in zoom-in-95 duration-500">
+             {/* LEFT: SLIDERS */}
+             <div className="col-span-12 lg:col-span-6 space-y-6">
+                <section className="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                   <h2 className="text-2xl font-black italic mb-8 uppercase tracking-tighter flex items-center gap-3">
+                      <Zap className="text-amber-400 w-6 h-6" /> Strategic Reward Mix
+                   </h2>
+                   
+                   <div className="space-y-10">
+                      <div className="space-y-4">
+                         <div className="flex justify-between items-center bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                            <div>
+                               <div className="text-[10px] text-slate-500 font-black uppercase mb-1">Overall Merit Pool</div>
+                               <div className="text-2xl font-black text-indigo-400">+{Math.round(decisions.meritPool * 100)}%</div>
+                            </div>
+                            <input 
+                              type="range" min="0" max="0.30" step="0.01" value={decisions.meritPool}
+                              onChange={(e) => setDecisions({...decisions, meritPool: parseFloat(e.target.value)})}
+                              className="w-48 accent-indigo-500"
+                            />
+                         </div>
+                         <p className="text-[10px] text-slate-600 italic">Expected to impact 'Normal Staff' retention by linked Merit Matrix.</p>
+                      </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <button 
-                  onClick={() => setDecisions({...decisions, benefits: 'standard'})}
-                  className={`py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${decisions.benefits === 'standard' ? 'bg-slate-700 text-white border-slate-600' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
-                >
-                  Standard 
-                </button>
-                <button 
-                  onClick={() => setDecisions({...decisions, benefits: 'premium'})}
-                  className={`py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${decisions.benefits === 'premium' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
-                >
-                  Premium Ben.
-                </button>
-              </div>
+                      <div className="space-y-4">
+                         <div className="flex justify-between items-center bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                            <div>
+                               <div className="text-[10px] text-slate-500 font-black uppercase mb-1">Sales Accelerator</div>
+                               <div className="text-2xl font-black text-emerald-400">{decisions.salesAcc.toFixed(1)}x</div>
+                            </div>
+                            <input 
+                              type="range" min="1.0" max="3.0" step="0.1" value={decisions.salesAcc}
+                              onChange={(e) => setDecisions({...decisions, salesAcc: parseFloat(e.target.value)})}
+                              className="w-48 accent-emerald-500"
+                            />
+                         </div>
+                         <p className="text-[10px] text-slate-600 italic">Pay-for-Performance incentive. Rewards high achievement exponentially.</p>
+                      </div>
 
-              <button 
-                onClick={handleSubmit}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition group flex items-center justify-center"
-              >
-                DEPLOY ROUND DECISIONS <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </section>
-        </div>
+                      <div className="space-y-4">
+                         <div className="flex justify-between items-center bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                            <div>
+                               <div className="text-[10px] text-slate-500 font-black uppercase mb-1">Executive LTI Mix</div>
+                               <div className="text-2xl font-black text-amber-500">{Math.round(decisions.ltiMix * 100)}%</div>
+                            </div>
+                            <input 
+                              type="range" min="0" max="0.60" step="0.05" value={decisions.ltiMix}
+                              onChange={(e) => setDecisions({...decisions, ltiMix: parseFloat(e.target.value)})}
+                              className="w-48 accent-amber-500"
+                            />
+                         </div>
+                         <p className="text-[10px] text-slate-600 italic">Long-term alignment. Solves Agency Theory issues for BharatQuick leadership.</p>
+                      </div>
 
-        {/* Column 2: Talent Personas & Risk Heatmap */}
-        <div className="col-span-12 lg:col-span-5 space-y-6">
-           <section className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl p-6">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Users className="text-indigo-400 w-5 h-5" /> Talent Persona Hub
-              </h2>
+                      <div className="pt-6 border-t border-slate-800">
+                         <div className="flex justify-between items-center mb-6">
+                            <div>
+                               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Promotions</span>
+                               <div className="text-xl font-bold text-white">{promotedEmployees.length} Enlisted</div>
+                            </div>
+                            <div className="text-right">
+                               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Equity Adjustment Pool</span>
+                               <div className="text-xl font-bold text-emerald-400">₹{(decisions.parityPool/100000).toFixed(1)}L</div>
+                            </div>
+                         </div>
+                         <button 
+                           onClick={handleSubmit}
+                           className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.4em] rounded-3xl shadow-2xl shadow-indigo-500/20 active:scale-[0.98] transition group flex items-center justify-center text-sm"
+                         >
+                            AUTHORIZE ROUND DECISIONS <ChevronRight className="ml-3 group-hover:translate-x-1 transition-transform" />
+                         </button>
+                      </div>
+                   </div>
+                </section>
+             </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                 {Object.keys(sessionData.personas || {}).map(p => (
-                   <button 
-                    key={p} 
-                    onClick={() => setActivePersona(p)}
-                    className={`px-3 py-2 rounded-lg text-[10px] font-bold uppercase transition ${activePersona === p ? 'bg-indigo-500 bg-opacity-20 text-indigo-400 border border-indigo-500/30' : 'bg-slate-800 text-slate-500 border border-transparent'}`}
-                   >
-                     {p}
-                   </button>
-                 ))}
-              </div>
+             {/* RIGHT: METRIC PREVIEW */}
+             <div className="col-span-12 lg:col-span-6 space-y-6">
+                <section className="bg-slate-900 border border-slate-800 p-8 rounded-3xl h-full flex flex-col justify-between shadow-sm">
+                   <div>
+                      <h3 className="text-lg font-black italic mb-8 uppercase text-slate-500">Predicted Strategic Impact</h3>
+                      <div className="space-y-6">
+                         <div className="flex items-center gap-6">
+                            <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col items-center justify-center">
+                               <div className="text-2xl font-black text-indigo-400">{myPlayer?.score || '78'}</div>
+                               <div className="text-[8px] font-bold text-slate-500 uppercase">HES Score</div>
+                            </div>
+                            <div className="flex-grow">
+                               <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase mb-2">
+                                  <span>Talent Sustainability (1-HES)</span>
+                                  <span className="text-emerald-400">EXCELLENT</span>
+                               </div>
+                               <div className="h-2 w-full bg-slate-950 rounded-full">
+                                  <div className="h-full bg-emerald-500" style={{width: `${myPlayer?.score || 78}%`}} />
+                               </div>
+                            </div>
+                         </div>
 
-              {sessionData.personas?.[activePersona] && (
-                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-5 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-bold">{sessionData.personas[activePersona].title}</h3>
-                      <p className="text-slate-500 text-xs uppercase tracking-tight">{sessionData.personas[activePersona].count} Employees | Avg. ${sessionData.personas[activePersona].avgPay.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-rose-500/10 text-rose-500 p-2 rounded-lg">
-                       <AlertTriangle className="w-4 h-4" />
-                    </div>
-                  </div>
+                         <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4">
+                            <div className="flex justify-between items-center">
+                               <span className="text-[10px] font-black text-slate-500 uppercase">Budget Burn Velocity</span>
+                               <span className="text-xs font-mono text-emerald-400">SUSTAINABLE</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-[10px] font-black text-slate-500 uppercase">Equity Theory Parity (p)</span>
+                               <span className={`text-xs font-mono ${currentMetrics.pValue < 0.05 ? 'text-rose-500' : 'text-slate-300'}`}>{currentMetrics.pValue || '0.082'}</span>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
 
-                  <div className="bg-slate-900 border-l-2 border-amber-500 p-4 rounded-r-lg">
-                    <p className="text-sm italic text-slate-400 flex items-start">
-                      <MessageSquare className="w-4 h-4 mr-2 mt-1 flex-shrink-0 text-slate-600" />
-                      "{sessionData.personas[activePersona].chatter}"
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 pt-2">
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-slate-500">
-                      <span>Persona Attrition Risk</span>
-                      <span className={currentMetrics.personaRisk?.[activePersona] > 0.1 ? 'text-rose-500' : 'text-emerald-500'}>
-                        {Math.round((currentMetrics.personaRisk?.[activePersona] || 0.05) * 100)}%
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-1000 ${currentMetrics.personaRisk?.[activePersona] > 0.1 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${(currentMetrics.personaRisk?.[activePersona] || 0.05) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-           </section>
-
-           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-950/50 rounded-xl border border-slate-800/50 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-2 text-indigo-500 opacity-20"><BarChart3 className="w-12 h-12" /></div>
-                <div className="text-[10px] uppercase font-bold text-slate-500 mb-2">P-Value Parity</div>
-                <div className={`text-2xl font-mono font-bold ${currentMetrics.pValue < 0.05 ? 'text-rose-500 animate-pulse' : 'text-slate-100'}`}>{currentMetrics.pValue || '0.082'}</div>
-                <div className="text-[9px] mt-1 text-slate-600">Threshold: 0.05</div>
-              </div>
-              <div className="p-4 bg-slate-950/50 rounded-xl border border-slate-800/50 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-2 text-emerald-500 opacity-20"><TrendingUp className="w-12 h-12" /></div>
-                <div className="text-[10px] uppercase font-bold text-slate-500 mb-2">Retention ROI</div>
-                <div className="text-2xl font-mono font-bold text-slate-100">{Math.round((currentMetrics.roi || 0.65) * 100)}%</div>
-                <div className="text-[9px] mt-1 text-slate-600">Cumulative Efficiency</div>
-              </div>
-           </section>
-                {/* Column 3: Communication Center & Market Ticker */}
-        <div className="col-span-12 lg:col-span-3 space-y-6">
-           <section className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-full overflow-hidden shadow-2xl">
-              <div className="bg-slate-800/50 p-4 border-b border-slate-700 flex items-center justify-between">
-                 <h2 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                   <MessageSquare className="text-indigo-400 w-4 h-4" /> Comm Center
-                 </h2>
-                 <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-bold">LIVE FEED</span>
-              </div>
-
-              <div className="flex-grow p-4 space-y-4 overflow-auto bg-slate-900/30">
-                 {/* STORY MEMO */}
-                 <div className="bg-indigo-900/10 border-l-2 border-indigo-500 p-4 rounded-r-xl group hover:bg-indigo-900/20 transition-all cursor-default">
-                    <div className="text-[9px] font-black text-indigo-400 uppercase mb-1 tracking-tighter flex justify-between">
-                       <span>FROM: BOARD OF DIRECTORS</span>
-                       <span>PRIORITY: HIGH</span>
-                    </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed font-serif italic">
-                       "{sessionData.round === 3 ? 'We require technical proof of your range spread calculations.' : 'The quarterly efficiency targets are non-negotiable. Projections show high risk.'}"
-                    </p>
-                 </div>
-
-                 {/* SLACK MESSAGE */}
-                 <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-slate-600 transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                       <div className="w-5 h-5 rounded bg-amber-500 text-[10px] flex items-center justify-center font-bold text-slate-900">#</div>
-                       <span className="text-[10px] font-black text-slate-400 uppercase">#general-chatter</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 italic">
-                      "Heard rumors about the {sessionData.round === 4 ? 'equity audit' : 'new bonus pool'}. People are checking other offers already..."
-                    </p>
-                 </div>
-
-                 {/* INDUSTRY NEWS */}
-                 <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-inner">
-                    <div className="flex items-center gap-2 mb-2">
-                       <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center">
-                          <BarChart3 className="w-3 h-3 text-slate-500" />
-                       </div>
-                       <span className="text-[10px] font-black text-slate-300 uppercase italic">HR Market Intel</span>
-                    </div>
-                    <div className="space-y-3">
-                       <p className="text-[11px] text-slate-400 leading-tight">
-                         • Competitor X raises base pay by 12% in the tech sector.
-                       </p>
-                       <p className="text-[11px] text-slate-400 leading-tight">
-                         • Global inflation spikes; workforce demanding 'Cost of Living' adjustments.
-                       </p>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="p-4 bg-slate-950/50 border-t border-slate-800">
-                <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-lg p-3">
-                   <div className="text-[9px] uppercase font-black text-emerald-400 mb-1">Strategic Advice</div>
-                   <p className="text-[10px] text-slate-500 italic leading-snug">
-                     {sessionData.round === 3 ? 'Ensure your Comp-Ratio logic is defensible.' : 'Higher base pay reduces immediate churn but hits ROI hard.'}
-                   </p>
-                </div>
-              </div>
-           </section>
-        </div>
- </div>
-
+                   <div className="bg-indigo-900/10 border border-indigo-500/20 p-6 rounded-3xl mt-12 animate-pulse">
+                      <div className="flex items-center gap-3 mb-3">
+                         <Target className="w-5 h-5 text-indigo-400" />
+                         <span className="text-[10px] font-black text-indigo-300 uppercase">Leadership Advice</span>
+                      </div>
+                      <p className="text-xs text-slate-400 italic">"Managing a Consumer-Tech hybrid requires balancing India's Tier-3 cost advantages with Bangalore's tech-inflation pressures. Watch your Comp-Ratio distributions carefully."</p>
+                   </div>
+                </section>
+             </div>
+          </div>
+        )}
       </main>
 
       {/* Footer / Status Ticker */}

@@ -19,6 +19,7 @@ redis.on('ready', () => console.log('>>> Redis Client Ready'));
 const { calculateHES, processRound, calculateParityPValue } = require('./gameEngine');
 const { getThemeConfig } = require('./industryThemes');
 const { challenges, personas, getTriggeredEvent } = require('./eventLibrary');
+const { workforce } = require('./indiaWorkforce');
 
 const app = express();
 app.use(cors({
@@ -79,6 +80,7 @@ io.on('connection', (socket) => {
           status: 'active', // Direct to active for simulation flow
           players: {},
           personas: personas, // Add personas to session
+          workforce: workforce, // Add India workforce master file
           history: []
         };
       }
