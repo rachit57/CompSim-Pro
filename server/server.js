@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const Redis = require('ioredis');
+const cors = require('cors');
 require('dotenv').config();
 
 const redis = new Redis(process.env.REDIS_URL);
