@@ -190,13 +190,13 @@ export default function GameDashboard() {
              <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
                 <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-4 opacity-5"><MessageSquare className="w-32 h-32" /></div>
-                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Internal Communication</h3>
+                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Direct Communication</h3>
                    <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">{NARRATIVE_DOSSIER.ceo_memo.title}</h2>
-                   <div className="text-slate-500 text-[10px] font-mono mb-4 uppercase">From: {NARRATIVE_DOSSIER.ceo_memo.author}</div>
+                   <div className="text-slate-500 text-[10px] font-mono mb-4 uppercase">Sender: {NARRATIVE_DOSSIER.ceo_memo.author}</div>
                    <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.ceo_memo.content}</p>
                 </section>
                 <section className="bg-slate-900/80 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
-                   <h3 className="text-rose-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Confidential Intercept</h3>
+                   <h3 className="text-rose-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Internal Intel</h3>
                    <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">{NARRATIVE_DOSSIER.board_intercept.title}</h2>
                    <div className="text-slate-500 text-[10px] font-mono mb-4 uppercase">Source: {NARRATIVE_DOSSIER.board_intercept.author}</div>
                    <p className="text-slate-300 text-sm leading-relaxed font-serif whitespace-pre-line">{NARRATIVE_DOSSIER.board_intercept.content}</p>
@@ -204,15 +204,15 @@ export default function GameDashboard() {
              </div>
              <div className="space-y-8 h-[700px] overflow-auto pr-4 scrollbar-hide">
                 <section className="bg-slate-950/50 border border-amber-500/20 p-8 rounded-3xl border-l-4 border-l-amber-500">
-                   <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Intelligence Hub</h3>
+                   <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Market Intelligence</h3>
                    <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter underline decoration-amber-500 underline-offset-8">{NARRATIVE_DOSSIER.market_gossip.title}</h2>
-                   <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-line font-mono">{NARRATIVE_DOSSIER.market_gossip.content}</p>
+                   <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-line font-mono mt-4">{NARRATIVE_DOSSIER.market_gossip.content}</p>
                 </section>
-                <section className="bg-indigo-900/10 border border-indigo-500/20 p-8 rounded-3xl">
-                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Mission Context</h3>
-                   <h2 className="text-xl font-black italic mb-4 uppercase tracking-tighter">Your Objective</h2>
+                <section className="bg-indigo-900/10 border border-indigo-500/20 p-8 rounded-3xl border-dashed">
+                   <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Operational Protocol</h3>
+                   <h2 className="text-xl font-black italic mb-4 uppercase tracking-tighter">Instructions</h2>
                    <p className="text-slate-400 text-xs leading-relaxed italic">
-                      "Success in this simulation is not about finding a single 'right' number. It is about balancing the competing interests of individual stars, collective fairness, and corporate sustainability. Use the 1-on-1 Pulse reports to find what your spreadsheets are missing."
+                      "Data in the 'Market Intel' tab is raw intelligence. Use the 'Workforce Hub' to conduct 1-on-1s. Real strategic insights aren't found in benchmarks—they are found in conversations. Trust your deduction, not just your budget."
                    </p>
                 </section>
              </div>
