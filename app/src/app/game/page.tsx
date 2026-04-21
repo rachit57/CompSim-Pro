@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { socket } from '@/lib/socketClient';
 import { useGameStore } from '@/lib/store';
+import { ROUND_STORIES, FORMULA_OPTIONS } from '@/lib/narrative';
 import { 
   Activity, Users, DollarSign, TrendingUp, AlertTriangle, 
   ChevronRight, Zap, Target, BarChart3, MessageSquare 
@@ -116,8 +117,8 @@ export default function GameDashboard() {
 
              <div className="space-y-6 text-slate-300 relative z-10">
                 <div className="bg-slate-950/50 border-l-4 border-indigo-500 p-6 rounded-r-2xl">
-                   <p className="text-xl leading-relaxed italic text-indigo-100 italic">
-                      "{challenges.find(c => c.round === sessionData.round)?.story || 'Stabilize the cohort metrics and prepare for market fluctuations.'}"
+                   <p className="text-xl leading-relaxed italic text-indigo-100 font-serif">
+                      "{ROUND_STORIES[sessionData.round as keyof typeof ROUND_STORIES]?.story || 'Stabilize the cohort metrics and prepare for market fluctuations.'}"
                    </p>
                 </div>
 
@@ -142,26 +143,24 @@ export default function GameDashboard() {
                 </div>
              </div>
 
-             {/* FORMULA CHALLENGE FOR ROUND 3 */}
-             {sessionData.round === 3 && (
                 <div className="mt-8 p-6 bg-indigo-900/10 border border-indigo-500/30 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
                    <h3 className="text-sm font-bold text-indigo-300 mb-4 flex items-center gap-2">
                       <Target className="w-5 h-5" /> Round 3 Formula Audit:
                    </h3>
-                   <p className="text-xs text-slate-400 mb-4 italic">Confirm the standard formula for analyzing market competitiveness:</p>
+                   <p className="text-xs text-slate-400 mb-4 italic">Identify the standard formula for 'Market Position' analysis:</p>
                    <div className="grid gap-2">
-                      {['Comp-Ratio = (Salary / Market Midpoint)', 'Pay Spread = (Max - Min) / Salary', 'Revenue Efficiency = FTE / GMV'].map((formula, idx) => (
+                      {FORMULA_OPTIONS.map((f, idx) => (
                         <button 
                           key={idx}
+                          onClick={() => setShowBriefing(false)}
                           className="w-full text-left p-3 rounded-lg border border-slate-700 hover:border-indigo-500 hover:bg-indigo-500/10 transition text-xs font-mono flex items-center justify-between group"
                         >
-                          {formula}
+                          {f.text}
                           <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                       ))}
                    </div>
                 </div>
-             )}
 
              <button 
                 onClick={() => setShowBriefing(false)}
