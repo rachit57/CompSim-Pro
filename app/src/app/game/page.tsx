@@ -114,8 +114,7 @@ export default function GameDashboard() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
           <div className="max-w-3xl bg-slate-900 border border-indigo-500/30 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20 overflow-hidden relative">
              <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
-             
-             <div className="flex items-center gap-4 mb-8 relative">
+                   <div className="flex items-center gap-4 mb-8 relative">
                 <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
                    <MessageSquare className="text-indigo-400 w-8 h-8" />
                 </div>
@@ -123,9 +122,11 @@ export default function GameDashboard() {
                    <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-tight">
                      Round {sessionData.round}: SitRep
                    </h2>
-                   <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mt-1">Strategic Objective: {sessionData.round === 3 ? 'Formula Validation' : 'Performance Stabilization'}</p>
+                   <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mt-1">Strategic Objective: Decision Execution</p>
                 </div>
-                           <div className="space-y-6 text-slate-300 relative z-10">
+             </div>
+
+             <div className="space-y-6 text-slate-300 relative z-10">
                 <div className="bg-slate-950/50 border-l-4 border-indigo-500 p-6 rounded-r-2xl">
                    <p className="text-xl leading-relaxed italic text-indigo-100 font-serif">
                       "{ROUND_STORIES[sessionData.round as keyof typeof ROUND_STORIES]?.story || 'Stabilize the cohort metrics and prepare for market fluctuations.'}"
@@ -159,7 +160,6 @@ export default function GameDashboard() {
              >
                 ENTER COMMAND CENTER <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
              </button>
-button>
           </div>
         </div>
       )}
