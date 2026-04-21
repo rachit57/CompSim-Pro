@@ -5,9 +5,14 @@ const Redis = require('ioredis');
 const cors = require('cors');
 require('dotenv').config();
 
-const redis = new Redis(process.env.REDIS_URL);
-redis.on('error', (err) => console.error('Redis Error:', err));
-redis.on('connect', () => console.log('Connected to Redis'));
+const redis = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 50, 2000)
+});
+
+redis.on('error', (err) => console.error('!!! Redis Error:', err));
+redis.on('connect', () => console.log('>>> Connected to Redis'));
+redis.on('ready', () => console.log('>>> Redis Client Ready'));
 
 const { processRound, calculateHES } = require('./gameEngine');
 const { getThemeConfig } = require('./industryThemes');
@@ -44,29 +49,36 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
   socket.on('join_session', async ({ sessionCode, role, playerName }) => {
+    console.log(`>>> Join Attempt: ${playerName} (${role}) in session ${sessionCode} [socket:${socket.id}]`);
     socket.join(sessionCode);
     socketToSession[socket.id] = sessionCode;
     
-    let session = await getSession(sessionCode);
-    if (!session) {
-      session = {
-        theme: 'hyper_scale',
-        round: 0,
-        status: 'waiting',
-        players: {},
-        shocks: []
+    try {
+      let session = await getSession(sessionCode);
+      if (!session) {
+        console.log(`>>> Creating new session: ${sessionCode}`);
+        session = {
+          theme: 'hyper_scale',
+          round: 0,
+          status: 'waiting',
+          players: {},
+          shocks: []
+        };
+      }
+      
+      session.players[socket.id] = {
+        name: playerName,
+        role: role, 
+        score: null,
+        decisions: []
       };
-    }
-    
-    session.players[socket.id] = {
-      name: playerName,
-      role: role, 
-      score: null,
-      decisions: []
-    };
 
-    await saveSession(sessionCode, session);
-    io.to(sessionCode).emit('session_update', session);
+      await saveSession(sessionCode, session);
+      console.log(`>>> Session Saved & Updating: ${sessionCode}`);
+      io.to(sessionCode).emit('session_update', session);
+    } catch (err) {
+      console.error('!!! Join Session Error:', err);
+    }
   });
 
   socket.on('start_game', async ({ sessionCode, theme }) => {
