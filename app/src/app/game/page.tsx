@@ -11,7 +11,7 @@ import {
 
 export default function GameDashboard() {
   const router = useRouter();
-  const { sessionCode, role, playerName, sessionData, updateSessionData } = useGameStore();
+  const { sessionCode, role, playerName, sessionData, updateSessionData, hydrated } = useGameStore();
   
   const [decisions, setDecisions] = useState({
     basePayAdj: 0.05,
@@ -24,6 +24,9 @@ export default function GameDashboard() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // WAIT FOR HYDRATION BEFORE DECIDING TO REDIRECT
+    if (!hydrated) return;
+
     if (!sessionCode) {
       router.push('/');
       return;
