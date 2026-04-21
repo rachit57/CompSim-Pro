@@ -74,6 +74,10 @@ export default function GameDashboard() {
     </div>
   );
 
+  const handleSubmit = () => {
+    socket.emit('submit_decision', { sessionCode, decisions });
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-8 font-sans selection:bg-indigo-500/30">
       
