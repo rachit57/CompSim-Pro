@@ -59,7 +59,7 @@ export default function GameDashboard() {
     // Visual feedback for submission
   };
 
-  const currentMetrics = sessionData.players?.[socket.id]?.metrics || {
+  const currentMetrics = (socket.id && sessionData.players?.[socket.id]?.metrics) || {
     budgetUtil: 0.90, turnover: 0.05, engagement: 0.75, pValue: 0.08, roi: 0.65
   };
 
