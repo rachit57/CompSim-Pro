@@ -1,69 +1,73 @@
 export const NARRATIVE_DOSSIER = {
   ceo_memo: {
-    title: "Project BharatQuick: The 2026 Mandate",
+    title: "BharatQuick: The Mid-Year Reckoning",
     author: "Ishaan Kapur, Group CEO",
-    content: `Team, we are no longer just an app; we are the backbone of Indian consumption. From delivering groceries in 10 minutes in Mumbai to launching supply chains in Jaipur, BharatQuick is at a crossroads. 
+    content: `Team, the board has been breathing down my neck. We are growing at 30% month-on-month, but our 'Quick-Commerce' division is leaking money and people. 
 
-Our 'Quick-Commerce' wing is bleeding talent to VC-funded rivals, while our 'Legacy FMCG' division is struggling with massive geographic pay disparities. As our Head of Total Rewards, your job is to stabilize this 15-person core leadership and staff. If we don't fix our Internal Equity now, we won't survive the IPO next year. 
+We need to decide: are we a high-growth Disruptor or a legacy FMCG giant? Our pay strategy reflects our identity. If we want to win in Bangalore, we can't pay Mysore rates. But if we pay Bangalore rates across the board, we'll be bankrupt by Q3. 
 
-Strategic Focus:
-1. Talent Retention in Bangalore (Tech & Product).
-2. Cost Optimization in Tier 3/4 Cities (Operations).
-3. Aligning Sales Incentives for our massive expansion targets.`
+I don't need you to tell me the 'standard merit increment.' I need you to tell me how we stop our competitors from stealing our core. Handle it.`
   },
-  cfo_memo: {
-    title: "Financial Guardrails: ROI & The Burn",
-    author: "Meera Nair, CFO",
-    content: `Let's be clear: FMCG margins are thin (12-15%). We cannot blindly follow Tech-industry salary inflation. Every rupee spent on 'Base Pay' is a recurring expense. 
+  board_intercept: {
+    title: "CONFIDENTIAL: Internal Board Summary",
+    author: "Board Observer 02",
+    content: `Observed high levels of 'Sector Jealousy.' The Operations team in Tier-3 cities feels the Bangalore Tech team is being prioritized with the lion's share of the budget. 
 
-I am authorizing a Merit Pool, but I want to see **Sales Accelerators** used for the field teams. We only pay top-dollar for top-performance. Watch your **Comp-Ratio**—if we are paying 120% of market for a Tier-3 logistics role, you are failing our P&L.`
+There's also a worrying trend in the Sales division: top performers are hitting targets and then 'coasting' for the rest of the month. They aren't incentivized for the extra mile. The Compensation Lead needs to find a way to make performance exponential, not linear.`
   },
-  board_mandate: {
-    title: "Directive 402: Equity & Parity",
-    author: "Board of Directors",
-    content: `The Board will not tolerate a 'Boys Club' culture. Our Pay Parity (p-value) must stay above 0.05. We require a statistical justification for any gap exceeding 5%. 
-
-Furthermore, we are applying **Agency Theory** to our Executive tier. Their pay must be heavily weighted toward LTIs (RSUs) to ensure they aren't just chasing short-term quarterly bonuses.`
-  },
-  theory_intel: {
-    title: "The C&B Leadership Bible",
-    content: `Mastering this role requires understanding the psychology of pay:
-
-- **Equity Theory**: Employees don't just care what they make; they care what their peer 'Amit' makes. If Amit is a lower performer but makes more, Equity Perception crashes.
-- **Expectancy Theory**: The link between effort and reward. If a Sales person hits 120% quota but gets the same bonus as someone at 80%, they will quit. This is why we use **Accelerators**.
-- **The 50% Rule**: Per Indian Labour Code, Basic Pay must be 50% of CTC. Violating this triggers legal audits.`
+  market_gossip: {
+    title: "Intelligence Hub: Glassdoor & Market Heatmap",
+    content: `RECENT UPDATES:
+- **Bangalore (Tier 1)**: Senior Tech talent is now looking at LTI (Stock Options) as a primary decision factor. 
+- **Sales Sector**: Rival firm 'DunzoScale' just introduced 2x accelerators for their account managers. 
+- **The Dubai Exit**: We've seen a spike in Tier-2 managers taking 'Expat' offers for UAE-based startups. Tax-free cash is hard to fight with fixed INR base pay.`
   }
 };
 
 export const ROUND_STORIES = {
   1: {
-    title: "The Legacy Audit",
-    story: "Welcome to BharatQuick. You've inherited a messy salary structure. Your first task is to audit the 'Workforce Hub' and identify who is 'Red-Circled' (paid too high) and who is 'Green-Circled' (paid too low). The market is moving fast."
+    title: "The Silent Exodus",
+    story: "It's quiet—too quiet. Your first audit shows the workforce is stable on the surface, but the 1-on-1 reports suggest a deep undercurrent of comparison. No one is telling you what to change; you'll have to find the gaps yourself."
   },
   2: {
-    title: "The Bangalore Poaching Strike",
-    story: "URGENT: A rival Quick-Commerce giant is offering your Key Account Managers a 40% hike. If your 'Expectancy' links are weak, your sales stars will walk out today. Check the Benchmarking tab."
+    title: "The Quota Plateau",
+    story: "Sales targets are being met, but they aren't being crushed. The Board is asking why our growth has flattened. There's a rumor that the 'Sales Vibe' is off—the stars feel like they're carrying the weight of the laggards."
   },
   3: {
-    title: "The Strategic Board Audit",
-    story: "BOARD REQ: 'Prove the math.' The Board is questioning our Sales Commission budget. We need you to identify the standard Sales Accelerator formula before they freeze the budget."
+    title: "The Equity Whistleblower",
+    story: "A confidential report has landed on your desk. Someone leaked the 'Tech Merits' to the 'Operations' floor. Internal Equity isn't just a number anymore—it's a potential strike."
   },
   4: {
-    title: "The Tier-2 Expansion Gap",
-    story: "We are moving logistics to Pune and Jaipur. The 'Geographic Differential' is tricky. Do we keep Bangalore rates or move to local scales? Be careful with Equity Theory here—regional resentment is growing."
+    title: "The Dubai Calling (Crisis)",
+    story: "CRISIS: Sneha in Mysore just received an offer from a fintech in Dubai. She's a high-performer in a Tier-4 city. This isn't just about her; it's a test of our 'International' retention strategy. Do we bend, or do we break?"
   },
   5: {
-    title: "The Equity Whistleblower",
-    story: "A report highlights a 15% pay gap in the Product department. The p-value is dropping. If you don't adjust the 'Equity Pool' now, the PR damage will be irreversible."
+    title: "The Agency Problem",
+    story: "The Executive team is chasing short-term quarterly bonuses at the expense of our long-term R&D. We need to realign their DNA with the company's 3-year plan."
   },
   6: {
-    title: "The IPO Reckoning",
-    story: "Final Round. The CEO needs a final HES score to present to the IPO investors. Stabilize the workforce, maximize ROI, and ensure the Grade-mix is sustainable."
+    title: "The IPO Exit Interview",
+    story: "Investors are doing their final walk-through. Every decision you've made—every promotion, every accelerator—is being scrutinized for its 'Sustainability Index.' Finish the job."
   }
 };
 
-export const FORMULA_OPTIONS = [
-  { text: 'Commission = (Quota % * Rate) + (Over-achievement * Accelerator)', correct: true, id: 'sales_acc' },
-  { text: 'Comp-Ratio = Total Comp / Years of Service', correct: false, id: 'wrong_1' },
-  { text: 'Merit Pool = Revenue / Headcount', correct: false, id: 'wrong_2' }
-];
+// --- EMPLOYEE PULSE REGISTRY (The Hidden Clues) ---
+export const EMPLOYEE_PULSE: Record<number, Record<string, string>> = {
+  1: {
+    'S1': "I'm hitting target easily. But honestly? Why push for 150% when the commission is the same? I'd rather spend the time with my family.",
+    'N1': "I see what's happening at Swiggy. They are offering 40% more in RSUs. We are still talking about 'fixed yearly bonus.' It feels... old.",
+    'N5': "People in Bangalore complain about traffic while taking 3x my salary. I do the same QA work from Mysore. Is my rent *that* much cheaper?"
+  },
+  2: {
+    'S1': "My buddy at another firm just got a massive 'Accelerator' check. He bought a car. I got a 'Thank You' email from the CEO. Guess who's browsing JobSarta today?",
+    'E1': "The Board is worried about the IPO. I need to see more variable pay in my mix. I want more 'skin in the game.'",
+    'S4': "Target is a bit high for Jaipur market. I'm doing my best but I feel like I'm being set up to fail."
+  },
+  3: {
+    'N6': "The Tech guys got all the attention last round. We manage the actual deliveries. If we don't see a fair equity pool soon, the Jaipur hub might 'slow down' significantly.",
+    'N3': "I've been at P3 for three years. My performance is 5. If I don't see a promotion path soon, I'm taking that offer from Unilever."
+  },
+  4: {
+    'N5': "Dubai is offering me tax-free income and a relocation package for an Expat role. Mysore is great, but that's life-changing money. What's BharatQuick going to do? Tell me about the 'culture' again?"
+  }
+};

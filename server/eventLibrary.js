@@ -22,14 +22,12 @@ const challenges = [
   },
   {
     id: 'sales_audit',
-    title: 'Round 3: The Board Room Audit',
+    title: 'The Sales Incentive Crisis',
     round: 3,
-    isFormula: true,
-    formulaMetric: 'sales_acc',
-    description: 'Prove to the CFO that our Sales Accelerators are mathematically sound. Choose the correct formula for OTE with accelerators.',
+    description: 'The Board is concerned about "Target Coasting." Top performers are hitting quota and stopping. We need to overhaul our Variable Pay structure.',
     options: [
-      { id: 'A', text: 'Formula A (Correct)', correct: true, impact: { roi: 0.1, budget: 0.05 } },
-      { id: 'B', text: 'Formula B (Incorrect)', correct: false, impact: { roi: -0.05, budget: -0.02 } }
+      { id: 'A', text: 'Implement High Accelerators', impact: { roi: 0.15, budget: -0.05, engagement: 0.1 } },
+      { id: 'B', text: 'Tighten Quotas (Fixed Comm)', impact: { roi: 0.05, budget: 0.05, engagement: -0.15 } }
     ]
   },
   {

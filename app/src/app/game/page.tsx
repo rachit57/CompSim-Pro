@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { socket } from '@/lib/socketClient';
 import { useGameStore } from '@/lib/store';
-import { ROUND_STORIES, FORMULA_OPTIONS, NARRATIVE_DOSSIER } from '@/lib/narrative';
+import { ROUND_STORIES, NARRATIVE_DOSSIER, EMPLOYEE_PULSE } from '@/lib/narrative';
 import { 
   Activity, Users, DollarSign, TrendingUp, AlertTriangle, 
   ChevronRight, Zap, Target, BarChart3, MessageSquare 
@@ -24,6 +24,7 @@ export default function GameDashboard() {
   const [activeTab, setActiveTab] = useState<'briefing' | 'workforce' | 'market' | 'execution'>('briefing');
   const [promotedEmployees, setPromotedEmployees] = useState<string[]>([]);
   const [showBriefing, setShowBriefing] = useState(true);
+  const [selectedPulse, setSelectedPulse] = useState<{name: string, quote: string} | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,9 +125,7 @@ export default function GameDashboard() {
                    </h2>
                    <p className="text-slate-500 text-xs font-mono uppercase tracking-[0.2em] mt-1">Strategic Objective: {sessionData.round === 3 ? 'Formula Validation' : 'Performance Stabilization'}</p>
                 </div>
-             </div>
-
-             <div className="space-y-6 text-slate-300 relative z-10">
+                           <div className="space-y-6 text-slate-300 relative z-10">
                 <div className="bg-slate-950/50 border-l-4 border-indigo-500 p-6 rounded-r-2xl">
                    <p className="text-xl leading-relaxed italic text-indigo-100 font-serif">
                       "{ROUND_STORIES[sessionData.round as keyof typeof ROUND_STORIES]?.story || 'Stabilize the cohort metrics and prepare for market fluctuations.'}"
@@ -135,13 +134,13 @@ export default function GameDashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Market Context</h3>
+                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Market Status</h3>
                       <p className="text-sm leading-relaxed text-slate-400">
-                        Employees are watching your next move. {sessionData.round === 3 ? 'The Board is demanding technical proof of your strategy.' : 'Ensure you balance the budget while maintaining engagement.'}
+                        The board is watching. Use the **Workforce Hub** to conduct 1-on-1s and uncover the real sentiment behind these numbers.
                       </p>
                    </div>
                    <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
-                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key KPIs to Watch</h3>
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Metrics</h3>
                       <div className="flex justify-between items-center text-xs">
                          <span>Human Equity Score</span>
                          <span className="text-indigo-400 font-bold">{sessionData.players?.[myId]?.score || '--'}</span>
@@ -154,31 +153,13 @@ export default function GameDashboard() {
                 </div>
              </div>
 
-                <div className="mt-8 p-6 bg-indigo-900/10 border border-indigo-500/30 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
-                   <h3 className="text-sm font-bold text-indigo-300 mb-4 flex items-center gap-2">
-                      <Target className="w-5 h-5" /> Round 3 Formula Audit:
-                   </h3>
-                   <p className="text-xs text-slate-400 mb-4 italic">Identify the standard formula for 'Market Position' analysis:</p>
-                   <div className="grid gap-2">
-                      {FORMULA_OPTIONS.map((f, idx) => (
-                        <button 
-                          key={idx}
-                          onClick={() => setShowBriefing(false)}
-                          className="w-full text-left p-3 rounded-lg border border-slate-700 hover:border-indigo-500 hover:bg-indigo-500/10 transition text-xs font-mono flex items-center justify-between group"
-                        >
-                          {f.text}
-                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      ))}
-                   </div>
-                </div>
-
              <button 
                 onClick={() => setShowBriefing(false)}
                 className="w-full mt-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-indigo-500/20 active:scale-[0.98] transition group flex items-center justify-center"
              >
-                DEPLOY STRATEGY <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                ENTER COMMAND CENTER <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
              </button>
+button>
           </div>
         </div>
       )}
@@ -297,12 +278,23 @@ export default function GameDashboard() {
                               {emp.currentPay/emp.marketMid < 0.85 ? <span className="text-[8px] bg-rose-500/20 text-rose-500 px-2 py-0.5 rounded uppercase font-black animate-pulse">Green Circle</span> : <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded uppercase font-black">Stable</span>}
                            </td>
                            <td className="p-4 text-right">
-                              <button 
-                                onClick={() => togglePromotion(emp.id)}
-                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition ${promotedEmployees.includes(emp.id) ? 'bg-emerald-600 text-white border-none' : 'bg-transparent border border-slate-700 text-slate-400 hover:border-indigo-500'}`}
-                              >
-                                 {promotedEmployees.includes(emp.id) ? 'Promoted' : 'Promote'}
-                              </button>
+                              <div className="flex justify-end gap-2 text-right">
+                                <button 
+                                  onClick={() => {
+                                    const quote = EMPLOYEE_PULSE[sessionData.round]?.[emp.id] || "Everything seems fine for now. We are just waiting to see the next merit cycle.";
+                                    setSelectedPulse({ name: emp.name, quote });
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition"
+                                >
+                                   1-on-1
+                                </button>
+                                <button 
+                                  onClick={() => togglePromotion(emp.id)}
+                                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition ${promotedEmployees.includes(emp.id) ? 'bg-emerald-600 text-white border-none' : 'bg-transparent border border-slate-700 text-slate-400 hover:border-indigo-500'}`}
+                                >
+                                   {promotedEmployees.includes(emp.id) ? 'Promoted' : 'Promote'}
+                                </button>
+                              </div>
                            </td>
                         </tr>
                       ))}
@@ -486,6 +478,28 @@ export default function GameDashboard() {
          <div>Sim Engine v2.1.0-MBA | HighFidelity-Simulation-Active</div>
          <div>© 2026 CompSim Pro Systems</div>
       </footer>
+
+      {/* 1-on-1 CONFIDENTIAL PULSE MODAL */}
+      {selectedPulse && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="max-w-lg w-full bg-slate-900 border border-indigo-500/40 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10"><Users className="w-24 h-24" /></div>
+              <h3 className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Confidential Interview</h3>
+              <h2 className="text-2xl font-black italic mb-2 uppercase tracking-tighter">{selectedPulse.name}</h2>
+              <div className="bg-slate-950/80 border-l-2 border-indigo-500 p-6 rounded-r-2xl my-6">
+                 <p className="text-lg leading-relaxed text-indigo-100 font-serif italic">
+                    "{selectedPulse.quote}"
+                 </p>
+              </div>
+              <button 
+                onClick={() => setSelectedPulse(null)}
+                className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black uppercase tracking-widest rounded-xl transition"
+              >
+                END 1-ON-1
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

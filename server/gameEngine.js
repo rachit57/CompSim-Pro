@@ -60,6 +60,22 @@ function processRound(decisions, prevMetrics, themeConfig) {
     let attritionRisk = 0.05 + (equityGap * 2) + (expectancyGap * 0.5);
     attritionRisk *= marketPressure;
 
+    // --- SOCIAL COMPARISON (Sector Jealousy) ---
+    // If this employee is in Ops/Supply and Tech got a higher merit boost, add penalty
+    if (emp.dept !== 'Tech' && meritPool < 0.1) {
+       attritionRisk += 0.05; // Feeling like second-class citizens
+    }
+
+    // --- ROUND 4 CRISIS: SNEHA'S DUBAI OFFER ---
+    if (emp.id === 'N5' && decisions.round === 4) {
+       // Sneha needs an 'Expat' level boost or high LTI to stay
+       if (meritPool < 0.15 && ltiMix < 0.4) {
+          attritionRisk = 0.95; // She's definitely gone
+       } else {
+          attritionRisk = 0.1; // Retention successful
+       }
+    }
+
     // Specific Mechanics
     if (emp.type === 'sales') {
       // Sales Accelerator impact
