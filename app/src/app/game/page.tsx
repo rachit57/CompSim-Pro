@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { socket } from '@/lib/socketClient';
 import { useGameStore } from '@/lib/store';
-import { ROUND_STORIES, NARRATIVE_DOSSIER, EMPLOYEE_PULSE } from '@/lib/narrative';
+import { ROUND_STORIES, NARRATIVE_DOSSIER, EMPLOYEE_PULSE, CASE_STUDY_BRIEFING } from '@/lib/narrative';
 import { 
   Activity, Users, DollarSign, TrendingUp, AlertTriangle, 
   ChevronRight, Zap, Target, BarChart3, MessageSquare 
