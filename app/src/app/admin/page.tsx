@@ -31,62 +31,73 @@ export default function AdminDashboard() {
     socket.emit('advance_round', { sessionCode });
   };
 
-  const injectShock = () => {
-    socket.emit('inject_shock', { sessionCode, targetId: 'all', shockId: 1 });
+  const injectShock = (shockId: string) => {
+    socket.emit('inject_shock', { sessionCode, targetId: 'all', shockId });
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 grid grid-cols-12 gap-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 grid grid-cols-12 gap-6 font-sans">
       
       {/* Left Sidebar - Controls */}
-      <div className="col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col h-[calc(100vh-3rem)]">
-        <h1 className="text-xl font-bold mb-8 flex items-center text-rose-500">
-          <Settings className="mr-2" /> God Mode
+      <div className="col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-[calc(100vh-3rem)] shadow-2xl">
+        <h1 className="text-xl font-black mb-8 flex items-center text-rose-500 italic tracking-tighter">
+          <Settings className="mr-2 w-5 h-5" /> GOD MODE v2.1
         </h1>
         
         <div className="space-y-4 flex-grow">
-          <div className="bg-slate-800 p-4 rounded-lg">
-             <div className="text-xs text-slate-400 uppercase">Session Code</div>
-             <div className="text-2xl font-mono">{sessionCode}</div>
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+             <div className="text-[10px] text-slate-500 uppercase font-black mb-1">Active Session</div>
+             <div className="text-2xl font-mono font-bold text-indigo-400">{sessionCode}</div>
+          </div>
+          
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+             <div className="text-[10px] text-slate-500 uppercase font-black mb-1">Current Progress</div>
+             <div className="text-2xl font-mono font-bold text-emerald-400">Round {sessionData?.round || 1}/6</div>
           </div>
           
           <button 
-            onClick={startGame}
-            disabled={sessionData?.status !== 'waiting'}
-            className="w-full flex items-center justify-center py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition"
-          >
-            <Play className="mr-2 w-5 h-5" /> Launch Session
-          </button>
-          
-          <button 
             onClick={advanceRound}
-            disabled={sessionData?.status !== 'active'}
-            className="w-full flex items-center justify-center py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition"
+            disabled={sessionData?.round >= 6}
+            className="w-full flex items-center justify-center py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-black uppercase tracking-widest transition shadow-lg shadow-indigo-500/20"
           >
-            <FastForward className="mr-2 w-5 h-5" /> Force Round Advance
+            <FastForward className="mr-2 w-5 h-5" /> Next Strategic Round
           </button>
 
           <div className="pt-8 mt-8 border-t border-slate-800">
-             <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center">
-               <Zap className="mr-2 w-4 h-4 text-amber-500" /> Shock Injection
+             <h3 className="text-[10px] font-black text-slate-500 uppercase mb-4 flex items-center tracking-[0.2em]">
+               <Zap className="mr-2 w-4 h-4 text-amber-500" /> Manual Shocks
              </h3>
-             <button 
-                onClick={injectShock}
-                className="w-full py-3 border border-rose-500/50 hover:bg-rose-500/20 text-rose-400 rounded-lg font-bold transition"
-             >
-                Global Poaching Strike
-             </button>
+             <div className="space-y-2">
+               <button 
+                  onClick={() => injectShock('poach_tech')}
+                  className="w-full py-2 text-xs border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 rounded-lg font-bold transition"
+               >
+                  Poaching Strike
+               </button>
+               <button 
+                  onClick={() => injectShock('equity_audit')}
+                  className="w-full py-2 text-xs border border-amber-500/30 hover:bg-amber-500/10 text-amber-400 rounded-lg font-bold transition"
+               >
+                  Parity Audit
+               </button>
+             </div>
           </div>
         </div>
       </div>
 
       {/* Main Panel - Leaderboard */}
-      <div className="col-span-9 bg-slate-900 border border-slate-800 rounded-xl p-6 h-[calc(100vh-3rem)] overflow-hidden flex flex-col">
+      <div className="col-span-9 bg-slate-900 border border-slate-800 rounded-2xl p-6 h-[calc(100vh-3rem)] overflow-hidden flex flex-col shadow-2xl">
          <div className="flex justify-between items-center mb-6">
-           <h2 className="text-2xl font-bold">Class Leaderboard</h2>
-           <div className="flex bg-slate-800 rounded-lg p-2">
-             <div className="flex items-center px-4"><Users className="w-4 h-4 mr-2 text-indigo-400" /> {sessionData ? Object.keys(sessionData.players).length : 0} Active</div>
-             <div className="flex items-center px-4 border-l border-slate-700">Round {sessionData?.round || 0}/4</div>
+           <h2 className="text-2xl font-black uppercase tracking-tighter">Cohort Performance</h2>
+           <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-2 gap-4">
+             <div className="flex items-center px-4 py-1">
+               <Users className="w-4 h-4 mr-2 text-indigo-400" /> 
+               <span className="text-sm font-bold">{sessionData ? Object.keys(sessionData.players).length : 0} Enrolled</span>
+             </div>
+             <div className="flex items-center px-4 py-1 border-l border-slate-800">
+               <Activity className="w-4 h-4 mr-2 text-rose-500" />
+               <span className="text-sm font-bold text-rose-400">Avg Parity Risk: 0.082</span>
+             </div>
            </div>
          </div>
 

@@ -1,51 +1,71 @@
-function calculateHES(metrics) {
-  const { budgetUtil, turnover, engagement, mci } = metrics;
-  
-  // Budget (30%)
-  let budgetScore = 0;
-  if (budgetUtil >= 0.9 && budgetUtil <= 1.0) budgetScore = 100;
-  else if (budgetUtil >= 0.8 && budgetUtil < 0.9) budgetScore = 70;
-  else if (budgetUtil > 1.0 && budgetUtil <= 1.03) budgetScore = 85;
-  else if (budgetUtil > 1.03) budgetScore = 40;
-  else if (budgetUtil < 0.8) budgetScore = 55;
+/**
+ * MBA-HR Strategic Calculation Engine
+ * 
+ * Metrics:
+ * - HES (Human Equity Score): Strategic success indicator (0-100)
+ * - P-Value: Statistical significance of pay parity gaps (warning < 0.05)
+ * - Attrition Risk: Probability of persona turnover
+ */
 
-  // Turnover (25%)
-  let turnoverScore = 100 - (turnover * 8 * 100);
-  if (turnoverScore < 0) turnoverScore = 0;
-  if (turnover > 0.125) turnoverScore = 0;
-
-  // Engagement (25%)
-  let engScore = engagement * 100;
-
-  // Market Competitiveness Score (20%)
-  let mciScore = 0;
-  if (mci >= 0.5 && mci <= 0.6) mciScore = 100;
-  else if (mci >= 0.4 && mci < 0.5) mciScore = 75;
-  else if (mci > 0.6 && mci <= 0.70) mciScore = 80;
-  else if (mci < 0.4) mciScore = 50;
-  else if (mci > 0.75) mciScore = 60;
-
-  const total = (0.30 * budgetScore) + (0.25 * turnoverScore) + (0.25 * engScore) + (0.20 * mciScore);
-  return total.toFixed(2);
+function calculateParityPValue(decisions) {
+  // Simulates a t-test result for gender/race pay gaps.
+  // Higher "Equality Debt" from previous rounds or low "D&I Investment" drops the p-value.
+  const parityInvestment = decisions.parityAdj || 0;
+  const baseRisk = 0.08; // Normal variation
+  const pValue = Math.max(0.001, baseRisk + (parityInvestment * 2) - (Math.random() * 0.05));
+  return parseFloat(pValue.toFixed(3));
 }
 
-function processRound(decisions, themeConfig) {
-  // Mock processing logic based on student decisions
-  // decisions = { basePayAdj, variablePay, benefits, equityAdj, communication }
+function calculateHES(metrics) {
+  const { budgetUtil, turnover, engagement, pValue, roi } = metrics;
   
-  let budgetUtil = 0.95 + (decisions.basePayAdj * 0.5) + (decisions.variablePay * 0.2);
-  let turnover = 0.05 - (decisions.basePayAdj * 0.1) + (decisions.benefits === 'high' ? -0.02 : 0.02);
-  let engagement = 0.7 + (decisions.communication * 0.1) + (decisions.benefits === 'high' ? 0.1 : 0);
-  let mci = 0.5 + (decisions.basePayAdj * 0.2);
+  // Parity Penalty
+  const parityPenalty = pValue < 0.05 ? 40 : 0;
+  
+  // Budget Variance (Peak at 98% utilization)
+  let budgetScore = 100 - Math.abs(0.98 - budgetUtil) * 500;
+  budgetScore = Math.max(0, Math.min(100, budgetScore));
 
-  // Bounds
-  turnover = Math.max(0, Math.min(turnover, 1));
-  engagement = Math.max(0, Math.min(engagement, 1));
+  const total = (0.35 * budgetScore) + (0.25 * engagement * 100) + (0.20 * (100 - turnover * 100)) + (0.20 * roi * 100) - parityPenalty;
+  return Math.max(0, Math.min(100, total)).toFixed(2);
+}
 
-  const metrics = { budgetUtil, turnover, engagement, mci };
+function processRound(decisions, prevMetrics, themeConfig) {
+  // 4 Personas: Tech, Leadership, Mid-Level, Junior
+  const { basePayAdj, variablePay, benefits, parityAdj } = decisions;
+  
+  // MBA Level Logic: Different reward mixes attract different personas
+  // Tech: Sensitive to Base Pay & Variable Pay
+  // Leadership: Sensitive to variable pay (LTI/Options)
+  // Junior: Sensitive to wellbeing & growth
+  
+  const basePayWeight = themeConfig.industryModifiers.basePayImportance || 1;
+  
+  // 1. Calculate Attrition Risk per Persona
+  const personaRisk = {
+    tech: Math.max(0.02, 0.15 - (basePayAdj * 0.8) - (variablePay * 0.2)),
+    leadership: Math.max(0.01, 0.08 - (variablePay * 1.5)),
+    junior: Math.max(0.05, 0.20 - (basePayAdj * 0.2) - (benefits === 'premium' ? 0.1 : 0.02))
+  };
+
+  const avgTurnover = (personaRisk.tech + personaRisk.leadership + personaRisk.junior) / 3;
+  const engagement = 0.6 + (basePayAdj * 0.5) + (benefits === 'premium' ? 0.2 : 0);
+  const budgetUtil = 0.90 + (basePayAdj * 0.6) + (variablePay * 0.3) + (parityAdj * 0.2);
+  const pValue = calculateParityPValue(decisions);
+  const roi = 0.5 + (engagement * 0.4) - (avgTurnover * 0.5);
+
+  const metrics = { 
+    budgetUtil: parseFloat(budgetUtil.toFixed(2)), 
+    turnover: parseFloat(avgTurnover.toFixed(3)), 
+    engagement: parseFloat(Math.min(1, engagement).toFixed(2)), 
+    pValue,
+    roi: parseFloat(Math.min(1, roi).toFixed(2)),
+    personaRisk
+  };
+
   const hes = calculateHES(metrics);
 
   return { hes, metrics };
 }
 
-module.exports = { calculateHES, processRound };
+module.exports = { calculateHES, processRound, calculateParityPValue };

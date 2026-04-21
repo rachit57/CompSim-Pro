@@ -16,9 +16,9 @@ redis.on('error', (err) => {
 redis.on('connect', () => console.log('>>> Connected to Redis'));
 redis.on('ready', () => console.log('>>> Redis Client Ready'));
 
-const { processRound, calculateHES } = require('./gameEngine');
+const { calculateHES, processRound, calculateParityPValue } = require('./gameEngine');
 const { getThemeConfig } = require('./industryThemes');
-const { getRandomChallenges } = require('./eventLibrary');
+const { challenges, personas, getTriggeredEvent } = require('./eventLibrary');
 
 const app = express();
 app.use(cors({
@@ -75,10 +75,11 @@ io.on('connection', (socket) => {
         console.log(`>>> Creating new session: ${sessionCode}`);
         session = {
           theme: 'hyper_scale',
-          round: 0,
-          status: 'waiting',
+          round: 1,
+          status: 'active', // Direct to active for simulation flow
           players: {},
-          shocks: []
+          personas: personas, // Add personas to session
+          history: []
         };
       }
       
@@ -115,39 +116,33 @@ io.on('connection', (socket) => {
   });
 
   socket.on('submit_decision', async ({ sessionCode, decisions }) => {
-    const session = await getSession(sessionCode);
-    if (session && session.players[socket.id]) {
-      const player = session.players[socket.id];
-      player.decisions[session.round] = decisions;
-      await saveSession(sessionCode, session);
-    }
+    let session = await getSession(sessionCode);
+    if (!session) return;
+
+    // Process logic here or save for round advance
+    session.players[socket.id].decisions.push(decisions);
+    await saveSession(sessionCode, session);
+    io.to(sessionCode).emit('session_update', session);
   });
 
   socket.on('advance_round', async ({ sessionCode }) => {
-    const session = await getSession(sessionCode);
-    if (session) {
-      Object.keys(session.players).forEach(playerId => {
-        const player = session.players[playerId];
-        if (player.role !== 'admin' && player.decisions[session.round]) {
-           const result = processRound(player.decisions[session.round], session.themeConfig);
-           player.score = result.hes;
-           player.metrics = result.metrics;
-        }
-      });
+    let session = await getSession(sessionCode);
+    if (!session || session.round >= 6) return;
 
-      session.round += 1;
-      if (session.round > 4) {
-        session.status = 'finished';
-        io.to(sessionCode).emit('game_over', session);
-      } else {
-        io.to(sessionCode).emit('round_advanced', session);
-      }
-      await saveSession(sessionCode, session);
+    session.round += 1;
+    
+    // Check for triggered hook (The "Market Shocks")
+    const shock = getTriggeredEvent(session.round);
+    if (shock) {
+      io.to(sessionCode).emit('sudden_challenge', shock);
     }
+
+    await saveSession(sessionCode, session);
+    io.to(sessionCode).emit('round_advanced', session);
   });
 
   socket.on('inject_shock', ({ sessionCode, targetId, shockId }) => {
-    const shockEvents = getRandomChallenges(1);
+    const shockEvents = challenges; // Using imported challenges
     const shock = shockEvents[0];
     
     if (targetId === 'all') {
