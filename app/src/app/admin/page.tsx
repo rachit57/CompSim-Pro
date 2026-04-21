@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { socket } from '@/lib/socketClient';
-import { Zap, Play, FastForward, Users, Settings } from 'lucide-react';
+import { Zap, Play, FastForward, Users, Settings, Activity } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [sessionCode, setSessionCode] = useState('MBA2026');
