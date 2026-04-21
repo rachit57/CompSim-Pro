@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface GameState {
   sessionCode: string | null;
@@ -9,11 +10,18 @@ interface GameState {
   updateSessionData: (data: any) => void;
 }
 
-export const useGameStore = create<GameState>((set) => ({
-  sessionCode: null,
-  role: null,
-  playerName: null,
-  sessionData: null,
-  setSession: (sessionCode, role, playerName) => set({ sessionCode, role, playerName }),
-  updateSessionData: (data) => set({ sessionData: data }),
-}));
+export const useGameStore = create<GameState>()(
+  persist(
+    (set) => ({
+      sessionCode: null,
+      role: null,
+      playerName: null,
+      sessionData: null,
+      setSession: (sessionCode, role, playerName) => set({ sessionCode, role, playerName }),
+      updateSessionData: (data) => set({ sessionData: data }),
+    }),
+    {
+      name: 'comp-sim-pro-storage',
+    }
+  )
+);

@@ -99,20 +99,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('start_game', async ({ sessionCode, theme }) => {
-    const session = await getSession(sessionCode);
-    if (session) {
-      session.theme = theme;
-      session.themeConfig = getThemeConfig(theme);
-      session.status = 'active';
-      session.round = 1;
-      
-      await saveSession(sessionCode, session);
-      io.to(sessionCode).emit('game_started', session);
-      io.to(sessionCode).emit('market_brief', {
-        round: 1,
-        message: 'Market Briefing: Industry is heating up.',
-      });
-    }
+    let session = await getSession(sessionCode);
+    if (!session) return;
+    
+    session.status = 'active';
+    session.theme = theme || 'hyper_scale';
+    session.round = 1;
+    
+    await saveSession(sessionCode, session);
+    io.to(sessionCode).emit('game_started', session);
+    io.to(sessionCode).emit('session_update', session);
   });
 
   socket.on('submit_decision', async ({ sessionCode, decisions }) => {
@@ -123,6 +119,15 @@ io.on('connection', (socket) => {
     session.players[socket.id].decisions.push(decisions);
     await saveSession(sessionCode, session);
     io.to(sessionCode).emit('session_update', session);
+  });
+
+  socket.on('reset_session', async ({ sessionCode }) => {
+    console.log(`>>> RESET COMMAND RECEIVED for ${sessionCode}`);
+    await redis.del(`session:${sessionCode}`);
+    delete sessions[sessionCode];
+    
+    // Broadcast empty state or redirect
+    io.to(sessionCode).emit('session_update', null);
   });
 
   socket.on('advance_round', async ({ sessionCode }) => {

@@ -31,6 +31,16 @@ export default function AdminDashboard() {
     socket.emit('advance_round', { sessionCode });
   };
 
+  const startGame = () => {
+    socket.emit('start_game', { sessionCode, theme: 'hyper_scale' });
+  };
+
+  const handleReset = () => {
+    if (confirm('CRITICAL: Are you sure you want to WIPE the entire session? This will kick all students out.')) {
+      socket.emit('reset_session', { sessionCode });
+    }
+  };
+
   const injectShock = (shockId: string) => {
     socket.emit('inject_shock', { sessionCode, targetId: 'all', shockId });
   };
@@ -50,17 +60,27 @@ export default function AdminDashboard() {
              <div className="text-2xl font-mono font-bold text-indigo-400">{sessionCode}</div>
           </div>
           
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-             <div className="text-[10px] text-slate-500 uppercase font-black mb-1">Current Progress</div>
-             <div className="text-2xl font-mono font-bold text-emerald-400">Round {sessionData?.round || 1}/6</div>
-          </div>
-          
+          <button 
+                onClick={startGame}
+                disabled={sessionData?.round > 1 && sessionData?.status === 'active'}
+                className="w-full flex items-center justify-center py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 rounded-xl font-black uppercase tracking-widest transition shadow-lg shadow-emerald-500/20"
+          >
+            <Play className="mr-2 w-5 h-5" /> Start Simulation
+          </button>
+
           <button 
             onClick={advanceRound}
-            disabled={sessionData?.round >= 6}
+            disabled={!sessionData || sessionData.round >= 6}
             className="w-full flex items-center justify-center py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-black uppercase tracking-widest transition shadow-lg shadow-indigo-500/20"
           >
             <FastForward className="mr-2 w-5 h-5" /> Next Strategic Round
+          </button>
+
+          <button 
+            onClick={handleReset}
+            className="w-full flex items-center justify-center py-2 bg-rose-900/20 hover:bg-rose-900/40 text-rose-500 border border-rose-500/30 rounded-xl font-bold uppercase text-[10px] tracking-widest transition mt-4"
+          >
+            <AlertTriangle className="mr-2 w-3 h-3" /> Reset Session
           </button>
 
           <div className="pt-8 mt-8 border-t border-slate-800">
