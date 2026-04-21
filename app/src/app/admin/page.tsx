@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { socket } from '@/lib/socketClient';
 import { useGameStore } from '@/lib/store';
-import { Users, Settings, Activity } from 'lucide-react';
+import { Users, Settings, Activity, FastForward } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { sessionCode, hydrated } = useGameStore();
@@ -32,12 +32,16 @@ export default function AdminDashboard() {
     };
   }, [sessionCode, hydrated, router]);
 
+  const advanceRound = () => {
+    socket.emit('advance_round', { sessionCode });
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 grid grid-cols-12 gap-6 font-sans">
       
-      {/* Left Sidebar - Status Only */}
+      {/* Left Sidebar - Controls */}
       <div className="col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-[calc(100vh-3rem)] shadow-2xl">
-        <h1 className="text-xl font-black mb-8 flex items-center text-slate-500 italic tracking-tighter">
+        <h1 className="text-xl font-black mb-8 flex items-center text-rose-500 italic tracking-tighter">
           <Settings className="mr-2 w-5 h-5" /> PROFESSOR CONSOLE
         </h1>
         
@@ -46,11 +50,19 @@ export default function AdminDashboard() {
              <div className="text-[10px] text-slate-500 uppercase font-black mb-1">Session Active</div>
              <div className="text-2xl font-mono font-bold text-indigo-400">{sessionCode}</div>
           </div>
-          
-          <div className="bg-slate-950/50 p-6 rounded-xl border border-dashed border-slate-800 text-center">
-             <div className="text-xs text-slate-600 uppercase font-bold italic">Simulation Live View Only</div>
-             <p className="text-[10px] text-slate-700 mt-2">All controls are currently disabled for stability.</p>
+
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+             <div className="text-[10px] text-slate-500 uppercase font-black mb-1">Current Progress</div>
+             <div className="text-2xl font-mono font-bold text-emerald-400">Round {sessionData?.round || 1}/6</div>
           </div>
+          
+          <button 
+            onClick={advanceRound}
+            disabled={!sessionData || sessionData.round >= 6}
+            className="w-full flex items-center justify-center py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-black uppercase tracking-widest transition shadow-lg shadow-indigo-500/20"
+          >
+            <FastForward className="mr-2 w-5 h-5" /> Next Strategic Round
+          </button>
         </div>
       </div>
 
