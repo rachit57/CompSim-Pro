@@ -59,6 +59,8 @@ export default function GameDashboard() {
     // Visual feedback for submission
   };
 
+  const [showBriefing, setShowBriefing] = useState(true);
+
   // Safe access to player state
   const myId = socket.id as string;
   const myPlayer = sessionData.players?.[myId];
@@ -70,7 +72,66 @@ export default function GameDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-8 font-sans selection:bg-indigo-500/30">
       
-      {/* HUD Header */}
+      {/* MISSION BRIEFING MODAL */}
+      {showBriefing && sessionData.round === 1 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+          <div className="max-w-2xl bg-slate-900 border border-indigo-500/30 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20">
+             <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-indigo-500/10 rounded-xl">
+                   <Target className="text-indigo-400 w-8 h-8" />
+                </div>
+                <div>
+                   <h2 className="text-3xl font-black italic tracking-tighter uppercase">Mission Briefing</h2>
+                   <p className="text-slate-500 text-xs font-mono uppercase tracking-widest leading-none mt-1">Role: Head of Total Rewards</p>
+                </div>
+             </div>
+
+             <div className="space-y-6 text-slate-300">
+                <p className="text-lg leading-relaxed">
+                   Welcome to <span className="text-indigo-400 font-bold">CompSim Pro</span>. You have 6 rounds to transform the company's compensation strategy. 
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <div className="text-emerald-400 font-bold mb-1">HES Score</div>
+                      <p className="text-[10px] text-slate-500">Your total success metric. Balance budget vs. results.</p>
+                   </div>
+                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <div className="text-rose-500 font-bold mb-1">P-Value</div>
+                      <p className="text-[10px] text-slate-500">The "Parity Alarm". Stay above 0.05 to avoid legal audit.</p>
+                   </div>
+                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <div className="text-amber-400 font-bold mb-1">Retention</div>
+                      <p className="text-[10px] text-slate-500">Keep your persona attrition risk low to win.</p>
+                   </div>
+                </div>
+
+                <ul className="space-y-3 text-sm">
+                   <li className="flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 text-indigo-500 mt-0.5" />
+                      <span>Adjust the <span className="text-slate-100 font-bold underline decoration-indigo-500 decoration-2">Strategic Mix</span> sliders on the left.</span>
+                   </li>
+                   <li className="flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 text-indigo-500 mt-0.5" />
+                      <span>Check the <span className="text-slate-100 font-bold underline decoration-amber-500 decoration-2">Persona Hub</span> to see who is at risk.</span>
+                   </li>
+                   <li className="flex items-start gap-2">
+                       <ChevronRight className="w-4 h-4 text-indigo-500 mt-0.5" />
+                       <span>Watch the <span className="text-slate-100 font-bold underline decoration-emerald-500 decoration-2">Market Intel</span> feed for round-specific hooks.</span>
+                   </li>
+                </ul>
+             </div>
+
+             <button 
+                onClick={() => setShowBriefing(false)}
+                className="w-full mt-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-indigo-500/20 transition group flex items-center justify-center"
+             >
+                I AM READY TO DEPLOY <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+             </button>
+          </div>
+        </div>
+      )}
+
       <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-800 pb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -83,6 +144,13 @@ export default function GameDashboard() {
         </div>
         
         <div className="flex gap-4 items-center">
+          <button 
+            onClick={() => setShowBriefing(true)}
+            className="p-2 hover:bg-slate-800 rounded-full transition text-slate-500 hover:text-indigo-400"
+            title="View Mission Briefing"
+          >
+            <MessageSquare className="w-5 h-5" />
+          </button>
           <div className="text-right">
              <div className="text-4xl font-black text-slate-200">ROUND 0{sessionData.round || 1}</div>
              <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.2em]">System Status: {sessionData.status}</div>
