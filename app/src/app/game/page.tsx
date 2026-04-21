@@ -59,7 +59,11 @@ export default function GameDashboard() {
     // Visual feedback for submission
   };
 
-  const currentMetrics = (socket.id && sessionData.players?.[socket.id]?.metrics) || {
+  // Safe access to player state
+  const myId = socket.id as string;
+  const myPlayer = sessionData.players?.[myId];
+  
+  const currentMetrics = myPlayer?.metrics || {
     budgetUtil: 0.90, turnover: 0.05, engagement: 0.75, pValue: 0.08, roi: 0.65
   };
 
@@ -86,7 +90,7 @@ export default function GameDashboard() {
           <div className="h-12 w-[1px] bg-slate-800 mx-2" />
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
              <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Live HES Index</div>
-             <div className="text-2xl font-mono text-emerald-400 font-bold">{sessionData.players?.[socket.id]?.score || '72.4'}</div>
+             <div className="text-2xl font-mono text-emerald-400 font-bold">{myPlayer?.score || '72.4'}</div>
           </div>
         </div>
       </header>
