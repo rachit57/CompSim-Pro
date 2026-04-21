@@ -16,6 +16,9 @@ export default function GameDashboard() {
       return;
     }
 
+    socket.connect();
+    socket.emit('join_session', { sessionCode, role, playerName });
+
     socket.on('session_update', (data) => updateSessionData(data));
     socket.on('game_started', (data) => updateSessionData(data));
     socket.on('round_advanced', (data) => updateSessionData(data));

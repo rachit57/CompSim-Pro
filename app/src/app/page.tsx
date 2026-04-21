@@ -11,18 +11,10 @@ export default function Home() {
   const [name, setName] = useState('');
   const setSession = useGameStore((state) => state.setSession);
 
-  useEffect(() => {
-    socket.connect();
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (code && name) {
       setSession(code.toUpperCase(), 'student', name);
-      socket.emit('join_session', { sessionCode: code.toUpperCase(), role: 'student', playerName: name });
       router.push('/game');
     }
   };
