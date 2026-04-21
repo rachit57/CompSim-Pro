@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { socket } from '@/lib/socketClient';
-import { Zap, Play, FastForward, Users, Settings, Activity } from 'lucide-react';
+import { Zap, Play, FastForward, Users, Settings, Activity, AlertTriangle } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [sessionCode, setSessionCode] = useState('MBA2026');
@@ -29,10 +29,6 @@ export default function AdminDashboard() {
 
   const advanceRound = () => {
     socket.emit('advance_round', { sessionCode });
-  };
-
-  const startGame = () => {
-    socket.emit('start_game', { sessionCode, theme: 'hyper_scale' });
   };
 
   const handleReset = () => {
