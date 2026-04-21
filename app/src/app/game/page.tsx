@@ -21,6 +21,7 @@ export default function GameDashboard() {
   });
 
   const [activePersona, setActivePersona] = useState('tech');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionCode) {
@@ -31,7 +32,15 @@ export default function GameDashboard() {
     socket.connect();
     socket.emit('join_session', { sessionCode, role, playerName });
 
-    socket.on('session_update', (data) => updateSessionData(data));
+    socket.on('connect_error', (err) => {
+      console.error('!!! Socket Error:', err);
+      setErrorMessage(`Network Error: ${err.message}. Check your Vercel/Railway URL settings.`);
+    });
+
+    socket.on('session_update', (data) => {
+      setErrorMessage(null);
+      updateSessionData(data);
+    });
     socket.on('round_advanced', (data) => updateSessionData(data));
     socket.on('sudden_challenge', (shock) => {
       // Custom Modal or Toast could be used here
@@ -72,6 +81,13 @@ export default function GameDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-8 font-sans selection:bg-indigo-500/30">
       
+      {/* ERROR DIAGNOSTIC BANNER */}
+      {errorMessage && (
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-rose-600 text-white p-2 text-center text-xs font-bold animate-bounce">
+          ⚠️ {errorMessage}
+        </div>
+      )}
+
       {/* MISSION BRIEFING MODAL */}
       {showBriefing && sessionData.round === 1 && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
