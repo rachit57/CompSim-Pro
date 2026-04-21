@@ -20,6 +20,7 @@ export default function GameDashboard() {
     parityAdj: 0.02
   });
 
+  const [showBriefing, setShowBriefing] = useState(true);
   const [activePersona, setActivePersona] = useState('tech');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -46,7 +47,6 @@ export default function GameDashboard() {
     });
     socket.on('round_advanced', (data) => updateSessionData(data));
     socket.on('sudden_challenge', (shock) => {
-      // Custom Modal or Toast could be used here
       alert(`⚠️ MARKET SHOCK: ${shock.title}\n\n${shock.description}`);
     });
 
@@ -55,7 +55,15 @@ export default function GameDashboard() {
       socket.off('round_advanced');
       socket.off('sudden_challenge');
     };
-  }, [sessionCode, router, updateSessionData, role, playerName]);
+  }, [sessionCode, router, updateSessionData, role, playerName, hydrated]);
+
+  // Safe access to player state
+  const myId = socket.id as string;
+  const myPlayer = sessionData?.players?.[myId];
+  
+  const currentMetrics = myPlayer?.metrics || {
+    budgetUtil: 0.90, turnover: 0.05, engagement: 0.75, pValue: 0.08, roi: 0.65
+  };
 
   if (!sessionData) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -65,21 +73,6 @@ export default function GameDashboard() {
       </div>
     </div>
   );
-
-  const handleSubmit = () => {
-    socket.emit('submit_decision', { sessionCode, decisions });
-    // Visual feedback for submission
-  };
-
-  const [showBriefing, setShowBriefing] = useState(true);
-
-  // Safe access to player state
-  const myId = socket.id as string;
-  const myPlayer = sessionData.players?.[myId];
-  
-  const currentMetrics = myPlayer?.metrics || {
-    budgetUtil: 0.90, turnover: 0.05, engagement: 0.75, pValue: 0.08, roi: 0.65
-  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-8 font-sans selection:bg-indigo-500/30">
