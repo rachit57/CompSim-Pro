@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,7 +21,10 @@ import {
   Users,
   TrendingUp,
   Sliders,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { useTheme } from '@/lib/useTheme';
 
 // ── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -72,6 +75,7 @@ export default function GamePage() {
   const [submitted,   setSubmitted]   = useState(false);
   const [pulse, setPulse] = useState<{ name: string; role: string; quote: string } | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   // ── SOCKET SETUP ──────────────────────────────────────────────────────────
 
@@ -122,7 +126,7 @@ export default function GamePage() {
       <div className="min-h-screen bg-[#050a18] flex items-center justify-center">
         <div className="text-center">
           <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs text-slate-600">Connecting to session…</p>
+          <p className="text-xs text-[var(--text-muted)]">Connecting to session…</p>
         </div>
       </div>
     );
@@ -144,7 +148,20 @@ export default function GamePage() {
       decisions: { ...decisions, promotions: promoted, round },
     });
     setSubmitted(true);
-    if (round >= 6) {
+    
+    // Auto advance local state
+    if (round < 6) {
+      setPhase({ type: 'round-brief' }); 
+      setDecisions(DEFAULT_DECISIONS);
+      setPromoted([]);
+      setInterviewed([]);
+      setSubmitted(false);
+      // Bump round locally so the next brief matches the upcoming round state
+      updateSessionData({
+        ...sessionData,
+        round: round + 1
+      });
+    } else {
       setTimeout(() => setPhase({ type: 'end' }), 1400);
     }
   };
@@ -231,7 +248,7 @@ export default function GamePage() {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  //  PHASE: PLAYING — GAME DASHBOARD
+  //  PHASE: PLAYING - GAME DASHBOARD
   // ════════════════════════════════════════════════════════════════════════
 
   const tab    = phase.tab;
@@ -245,7 +262,7 @@ export default function GamePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050a18] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#050a18] text-[var(--text)] flex flex-col">
 
       {/* Error banner */}
       {errMsg && (
@@ -255,47 +272,56 @@ export default function GamePage() {
       )}
 
       {/* Top header */}
-      <header className="flex-none h-12 border-b border-white/[0.06] px-6 flex items-center justify-between bg-[#050a18]/95 sticky top-0 z-40 backdrop-blur-sm">
+      <header className="flex-none h-12 border-b border-[var(--border)] px-6 flex items-center justify-between bg-[#050a18]/95 sticky top-0 z-40 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <span className="text-[13px] font-semibold text-white">BharatQuick</span>
-          <span className="text-slate-800">·</span>
-          <span className="text-[11px] text-slate-600">CompSim Pro</span>
+          <span className="text-[13px] font-semibold text-[var(--text)]">BharatQuick</span>
+          <span className="text-[var(--text-muted)]">·</span>
+          <span className="text-[11px] text-[var(--text-muted)]">CompSim Pro</span>
         </div>
         <div className="flex items-center gap-5">
           <button
             onClick={() => setPhase({ type: 'round-brief' })}
-            className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors"
+            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
           >
             Round {round} Brief
           </button>
+          
+          <button
+            onClick={toggleTheme}
+            className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors p-1"
+            title="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
           <div className="text-right">
-            <div className="text-[9px] text-slate-700 uppercase tracking-wider">HES</div>
-            <div className="text-[13px] font-semibold font-mono text-indigo-400">
-              {myPlayer?.score ?? '—'}
+            <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">HES</div>
+            <div className="text-[13px] font-semibold font-mono text-[var(--accent)]">
+              {myPlayer?.score ?? '-'}
             </div>
           </div>
           <div className="text-right hidden sm:block">
-            <div className="text-[11px] text-slate-400">{playerName}</div>
-            <div className="text-[9px] text-slate-700 font-mono">{sessionCode}</div>
+            <div className="text-[11px] text-[var(--text-muted)]">{playerName}</div>
+            <div className="text-[9px] text-[var(--text-muted)] font-mono">{sessionCode}</div>
           </div>
         </div>
       </header>
 
       {/* Status bar */}
-      <div className="border-b border-white/[0.04] bg-[#07101e] px-6 py-2 flex items-center justify-between">
+      <div className="border-b border-[var(--border)] bg-[var(--surface-alt)] px-6 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
               submitted ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
             }`}
           />
-          <span className="text-[10px] text-slate-600">
+          <span className="text-[10px] text-[var(--text-muted)]">
             {submitted
-              ? 'Decisions submitted — awaiting next round'
+              ? 'Decisions submitted - awaiting next round'
               : `Round ${round} of 6 · Decisions pending`}
           </span>
         </div>
-        <div className="hidden sm:flex gap-5 text-[10px] font-mono text-slate-700">
+        <div className="hidden sm:flex gap-5 text-[10px] font-mono text-[var(--text-muted)]">
           <span>
             Engagement:&nbsp;
             <span className={metrics.engagement > 0.7 ? 'text-emerald-600' : 'text-red-500'}>
@@ -311,14 +337,14 @@ export default function GamePage() {
           <span>
             Parity p:&nbsp;
             <span className={metrics.pValue > 0.05 ? 'text-emerald-600' : 'text-red-500'}>
-              {metrics.pValue?.toFixed(3) ?? '—'}
+              {metrics.pValue?.toFixed(3) ?? '-'}
             </span>
           </span>
         </div>
       </div>
 
       {/* Tab bar */}
-      <nav className="border-b border-white/[0.05] px-6 flex bg-[#060c1a]">
+      <nav className="border-b border-[var(--border)] px-6 flex bg-[var(--surface-alt)]">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -326,8 +352,8 @@ export default function GamePage() {
             onClick={() => setTab(id)}
             className={`flex items-center gap-1.5 px-4 py-3.5 text-[12px] font-medium border-b-2 transition-all ${
               tab === id
-                ? 'border-indigo-500 text-slate-100'
-                : 'border-transparent text-slate-600 hover:text-slate-400'
+                ? 'border-indigo-500 text-[var(--text)]'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-muted)]'
             }`}
           >
             <Icon className="w-3.5 h-3.5" />
@@ -344,11 +370,11 @@ export default function GamePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
 
             {/* Current round story */}
-            <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
-              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+            <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+              <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-1">
                 Current Situation · Round {round} of 6
               </p>
-              <h2 className="font-display text-xl font-bold italic text-white mb-5">
+              <h2 className="font-display text-xl font-bold italic text-[var(--text)] mb-5">
                 {ROUND_STORIES[round]?.title}
               </h2>
               <div className="prose-sim space-y-4">
@@ -360,14 +386,14 @@ export default function GamePage() {
 
             <div className="space-y-6">
               {/* CEO Memo */}
-              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
-                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+              <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-1">
                   Executive Communication
                 </p>
-                <h3 className="text-[13px] font-semibold text-white mb-1">
+                <h3 className="text-[13px] font-semibold text-[var(--text)] mb-1">
                   {NARRATIVE_DOSSIER.ceo_memo.title}
                 </h3>
-                <p className="text-[10px] text-slate-700 font-mono mb-4">
+                <p className="text-[10px] text-[var(--text-muted)] font-mono mb-4">
                   {NARRATIVE_DOSSIER.ceo_memo.author}
                 </p>
                 <div className="prose-sim space-y-3">
@@ -378,8 +404,8 @@ export default function GamePage() {
               </section>
 
               {/* Strategic Roadmap */}
-              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
-                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-4">
+              <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-4">
                   Strategic Roadmap
                 </p>
                 <div className="space-y-1.5">
@@ -397,14 +423,14 @@ export default function GamePage() {
                             n < round
                               ? 'bg-emerald-700/25 text-emerald-500'
                               : n === round
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-slate-800 text-slate-600'
+                              ? 'bg-indigo-600 text-[var(--text)]'
+                              : 'bg-slate-800 text-[var(--text-muted)]'
                           }`}
                         >
                           {n < round ? '✓' : r}
                         </div>
                         <p className={`text-[11px] leading-snug ${
-                          n === round ? 'text-slate-300' : 'text-slate-600'
+                          n === round ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'
                         }`}>
                           {desc}
                         </p>
@@ -420,15 +446,15 @@ export default function GamePage() {
         {/* ── WORKFORCE ─────────────────────────────────────────────────── */}
         {tab === 'workforce' && (
           <div className="animate-in">
-            <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/[0.05] flex items-start justify-between gap-4">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-[var(--border)] flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-[13px] font-semibold text-white">Workforce Master File</h2>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
+                  <h2 className="text-[13px] font-semibold text-[var(--text)]">Workforce Master File</h2>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                     BharatQuick · {workforce.length} employees · Round {round}
                   </p>
                 </div>
-                <div className="flex gap-4 text-[10px] font-mono text-slate-600 text-right shrink-0">
+                <div className="flex gap-4 text-[10px] font-mono text-[var(--text-muted)] text-right shrink-0">
                   <span>Interviews: {4 - interviewed.length} / 4 left</span>
                   <span>Promotions: {2 - promoted.length} / 2 left</span>
                 </div>
@@ -437,7 +463,7 @@ export default function GamePage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-white/[0.05] text-[10px] font-medium text-slate-600 uppercase tracking-wider">
+                    <tr className="border-b border-[var(--border)] text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       <th className="text-left px-6 py-3">Employee</th>
                       <th className="text-left px-4 py-3">Grade</th>
                       <th className="text-left px-4 py-3">City · Tier</th>
@@ -456,32 +482,32 @@ export default function GamePage() {
                       const isPromoted   = promoted.includes(emp.id);
 
                       return (
-                        <tr key={emp.id} className="hover:bg-white/[0.015] transition-colors">
+                        <tr key={emp.id} className="hover:bg-[var(--surface-alt)] transition-colors">
                           <td className="px-6 py-3.5">
-                            <div className="text-[13px] font-medium text-slate-200">{emp.name}</div>
-                            <div className="text-[10px] text-slate-600">{emp.role}</div>
+                            <div className="text-[13px] font-medium text-[var(--text)]">{emp.name}</div>
+                            <div className="text-[10px] text-[var(--text-muted)]">{emp.role}</div>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className="text-[10px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] bg-slate-800/50 px-2 py-0.5 rounded">
                               {emp.level}
                             </span>
                           </td>
                           <td className="px-4 py-3.5">
-                            <div className="text-[12px] text-slate-400">{emp.city}</div>
-                            <div className="text-[10px] text-slate-700">Tier {emp.tier}</div>
+                            <div className="text-[12px] text-[var(--text-muted)]">{emp.city}</div>
+                            <div className="text-[10px] text-[var(--text-muted)]">Tier {emp.tier}</div>
                           </td>
                           <td className="px-4 py-3.5 text-center">
                             <span className={`text-[12px] font-semibold font-mono ${
                               emp.performance >= 4
                                 ? 'text-emerald-400'
                                 : emp.performance >= 3
-                                ? 'text-slate-400'
+                                ? 'text-[var(--text-muted)]'
                                 : 'text-red-400'
                             }`}>
                               {emp.performance}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-right font-mono text-[12px] text-slate-300">
+                          <td className="px-4 py-3.5 text-right font-mono text-[12px] text-[var(--text)]">
                             {fmtLPA(emp.currentPay)}
                           </td>
                           <td className="px-4 py-3.5 text-right">
@@ -495,7 +521,7 @@ export default function GamePage() {
                                 />
                               </div>
                               <span className={`text-[11px] font-mono font-medium ${
-                                isRisk ? 'text-red-400' : cr > 1.1 ? 'text-amber-400' : 'text-slate-400'
+                                isRisk ? 'text-red-400' : cr > 1.1 ? 'text-amber-400' : 'text-[var(--text-muted)]'
                               }`}>
                                 {fmtCR(emp.currentPay, emp.marketMid)}
                               </span>
@@ -504,7 +530,7 @@ export default function GamePage() {
                           <td className="px-4 py-3.5 text-center">
                             {isRisk
                               ? <span className="text-[9px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">Risk</span>
-                              : <span className="text-[9px] font-medium text-slate-700 bg-slate-800/60 px-2 py-0.5 rounded-full">Stable</span>
+                              : <span className="text-[9px] font-medium text-[var(--text-muted)] bg-slate-800/60 px-2 py-0.5 rounded-full">Stable</span>
                             }
                           </td>
                           <td className="px-6 py-3.5">
@@ -517,8 +543,8 @@ export default function GamePage() {
                                   wasInterviewed
                                     ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-600/25'
                                     : interviewed.length >= 4
-                                    ? 'text-slate-700 cursor-not-allowed'
-                                    : 'text-slate-500 border border-slate-800 hover:border-indigo-600/40 hover:text-indigo-400'
+                                    ? 'text-[var(--text-muted)] cursor-not-allowed'
+                                    : 'text-[var(--text-muted)] border border-[var(--border)] hover:border-indigo-600/40 hover:text-indigo-400'
                                 }`}
                               >
                                 {wasInterviewed ? 'Reviewed' : '1-on-1'}
@@ -531,8 +557,8 @@ export default function GamePage() {
                                   isPromoted
                                     ? 'bg-emerald-600/15 text-emerald-400 border border-emerald-600/25'
                                     : promoted.length >= 2
-                                    ? 'text-slate-700 cursor-not-allowed'
-                                    : 'text-slate-500 border border-slate-800 hover:border-emerald-600/40 hover:text-emerald-400'
+                                    ? 'text-[var(--text-muted)] cursor-not-allowed'
+                                    : 'text-[var(--text-muted)] border border-[var(--border)] hover:border-emerald-600/40 hover:text-emerald-400'
                                 }`}
                               >
                                 {isPromoted ? '✓ Promoted' : 'Promote'}
@@ -546,8 +572,8 @@ export default function GamePage() {
                 </table>
               </div>
 
-              <div className="px-6 py-2.5 border-t border-white/[0.04] bg-[#070e1b]">
-                <p className="text-[9px] text-slate-700 font-mono">
+              <div className="px-6 py-2.5 border-t border-[var(--border)] bg-[var(--surface-alt)]">
+                <p className="text-[9px] text-[var(--text-muted)] font-mono">
                   Comp-Ratio: &lt;0.85 = Risk · 0.85–1.10 = Market · &gt;1.10 = Above market
                 </p>
               </div>
@@ -561,23 +587,23 @@ export default function GamePage() {
             <div className="lg:col-span-2 space-y-6">
 
               {/* Salary benchmarks */}
-              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
-                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-5">
+              <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-5">
                   Salary Benchmarks · P50 Market Median
                 </p>
                 <div className="divide-y divide-white/[0.04]">
                   {[
-                    { tier: 'Tier 1 — Mumbai / Bengaluru',   staff: '₹18–25L', sales: '₹12L + variable', exec: '₹60–90L' },
-                    { tier: 'Tier 2 — Pune / Hyderabad',     staff: '₹12–18L', sales: '₹8L + variable',  exec: '₹45–60L' },
-                    { tier: 'Tier 3 — Jaipur / Kochi',       staff: '₹6–10L',  sales: '₹5L + variable',  exec: '₹30–40L' },
-                    { tier: 'Tier 4 — Mysore / Indore',      staff: '₹4–7L',   sales: '₹4L + commission',exec: '₹20–30L' },
+                    { tier: 'Tier 1 - Mumbai / Bengaluru',   staff: '₹18–25L', sales: '₹12L + variable', exec: '₹60–90L' },
+                    { tier: 'Tier 2 - Pune / Hyderabad',     staff: '₹12–18L', sales: '₹8L + variable',  exec: '₹45–60L' },
+                    { tier: 'Tier 3 - Jaipur / Kochi',       staff: '₹6–10L',  sales: '₹5L + variable',  exec: '₹30–40L' },
+                    { tier: 'Tier 4 - Mysore / Indore',      staff: '₹4–7L',   sales: '₹4L + commission',exec: '₹20–30L' },
                   ].map((row, i) => (
                     <div key={i} className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <span className="text-[12px] font-medium text-slate-300">{row.tier}</span>
-                      <div className="flex gap-4 text-[11px] font-mono text-slate-600">
-                        <span>Staff: <b className="text-slate-400">{row.staff}</b></span>
-                        <span>Sales: <b className="text-slate-400">{row.sales}</b></span>
-                        <span>Exec:  <b className="text-slate-400">{row.exec}</b></span>
+                      <span className="text-[12px] font-medium text-[var(--text)]">{row.tier}</span>
+                      <div className="flex gap-4 text-[11px] font-mono text-[var(--text-muted)]">
+                        <span>Staff: <b className="text-[var(--text-muted)]">{row.staff}</b></span>
+                        <span>Sales: <b className="text-[var(--text-muted)]">{row.sales}</b></span>
+                        <span>Exec:  <b className="text-[var(--text-muted)]">{row.exec}</b></span>
                       </div>
                     </div>
                   ))}
@@ -585,14 +611,14 @@ export default function GamePage() {
               </section>
 
               {/* Board intercept */}
-              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
-                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
-                  Board Intercept — Confidential
+              <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-1">
+                  Board Intercept - Confidential
                 </p>
-                <h3 className="text-[13px] font-semibold text-white mb-4">
+                <h3 className="text-[13px] font-semibold text-[var(--text)] mb-4">
                   {NARRATIVE_DOSSIER.board_intercept.title}
                 </h3>
-                <p className="text-[10px] text-slate-700 font-mono mb-4">
+                <p className="text-[10px] text-[var(--text-muted)] font-mono mb-4">
                   {NARRATIVE_DOSSIER.board_intercept.author}
                 </p>
                 <div className="prose-sim space-y-3">
@@ -605,8 +631,8 @@ export default function GamePage() {
 
             {/* Market signals sidebar */}
             <div>
-              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-5">
-                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-5">
+              <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+                <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-5">
                   Market Signals
                 </p>
                 <div className="space-y-5">
@@ -632,9 +658,9 @@ export default function GamePage() {
                       note:   'Tier-3 employees outperform Tier-1 counterparts on per-rupee productivity by an estimated 34%. Retention ROI is strong at this band.',
                     },
                   ].map((s, i) => (
-                    <div key={i} className="border-l-2 border-slate-800 pl-3.5">
+                    <div key={i} className="border-l-2 border-[var(--border)] pl-3.5">
                       <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-[12px] font-medium text-slate-300">{s.label}</span>
+                        <span className="text-[12px] font-medium text-[var(--text)]">{s.label}</span>
                         <span className={`text-[9px] font-semibold uppercase tracking-wider ${
                           s.level === 'Critical'    ? 'text-red-500'
                           : s.level === 'High'      ? 'text-amber-500'
@@ -643,7 +669,7 @@ export default function GamePage() {
                           {s.level}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 leading-relaxed">{s.note}</p>
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">{s.note}</p>
                     </div>
                   ))}
                 </div>
@@ -658,7 +684,7 @@ export default function GamePage() {
 
             {/* Levers */}
             <div className="space-y-5">
-              <h2 className="text-[13px] font-semibold text-slate-300">Decision Levers</h2>
+              <h2 className="text-[13px] font-semibold text-[var(--text)]">Decision Levers</h2>
 
               {/* Merit Pool */}
               <LeverCard
@@ -674,7 +700,7 @@ export default function GamePage() {
                   onChange={(e) => setDecisions((d) => ({ ...d, meritPool: +e.target.value }))}
                   style={{ background: sliderBg(decisions.meritPool / 0.3) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
                   <span>0%</span><span>30%</span>
                 </div>
               </LeverCard>
@@ -693,7 +719,7 @@ export default function GamePage() {
                   onChange={(e) => setDecisions((d) => ({ ...d, salesAcc: +e.target.value }))}
                   style={{ background: sliderBg((decisions.salesAcc - 1) / 2) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
                   <span>1.0× (Linear)</span><span>3.0×</span>
                 </div>
               </LeverCard>
@@ -712,7 +738,7 @@ export default function GamePage() {
                   onChange={(e) => setDecisions((d) => ({ ...d, ltiMix: +e.target.value }))}
                   style={{ background: sliderBg(decisions.ltiMix / 0.6) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
                   <span>0% (Full cash)</span><span>60%</span>
                 </div>
               </LeverCard>
@@ -731,7 +757,7 @@ export default function GamePage() {
                   onChange={(e) => setDecisions((d) => ({ ...d, parityPool: +e.target.value }))}
                   style={{ background: sliderBg(decisions.parityPool / 1000000) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
                   <span>₹0</span><span>₹10L</span>
                 </div>
               </LeverCard>
@@ -739,36 +765,36 @@ export default function GamePage() {
 
             {/* Submission summary */}
             <div className="space-y-5">
-              <h2 className="text-[13px] font-semibold text-slate-300">Submission Summary</h2>
+              <h2 className="text-[13px] font-semibold text-[var(--text)]">Submission Summary</h2>
 
               {/* Metrics */}
-              <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-4 grid grid-cols-2 gap-3">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 grid grid-cols-2 gap-3">
                 {[
-                  { l: 'HES Score',    v: myPlayer?.score ?? '—',    good: (myPlayer?.score ?? 0) >= 65 },
+                  { l: 'HES Score',    v: myPlayer?.score ?? '-',    good: (myPlayer?.score ?? 0) >= 65 },
                   { l: 'Engagement',   v: fmtPct(metrics.engagement), good: metrics.engagement > 0.7    },
-                  { l: 'Parity p',     v: metrics.pValue?.toFixed(3) ?? '—', good: metrics.pValue > 0.05 },
+                  { l: 'Parity p',     v: metrics.pValue?.toFixed(3) ?? '-', good: metrics.pValue > 0.05 },
                   { l: 'Turnover',     v: fmtPct(metrics.turnover),   good: metrics.turnover < 0.08     },
                 ].map((m) => (
-                  <div key={m.l} className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 text-center">
-                    <div className={`text-xl font-bold font-mono ${m.good ? 'text-slate-200' : 'text-red-400'}`}>
+                  <div key={m.l} className="bg-[var(--surface-alt)] border border-[var(--border)] rounded-lg p-3 text-center">
+                    <div className={`text-xl font-bold font-mono ${m.good ? 'text-[var(--text)]' : 'text-red-400'}`}>
                       {m.v}
                     </div>
-                    <div className="text-[9px] text-slate-600 uppercase tracking-wider mt-1">{m.l}</div>
+                    <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{m.l}</div>
                   </div>
                 ))}
               </div>
 
               {/* Promotions */}
-              <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-5">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.15em]">
+                  <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.15em]">
                     Promotions Nominated
                   </p>
-                  <span className="text-[10px] text-slate-700 font-mono">{promoted.length} / 2</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono">{promoted.length} / 2</span>
                 </div>
                 {promoted.length === 0 ? (
-                  <p className="text-[11px] text-slate-700 italic">
-                    None — use the Workforce tab to nominate employees.
+                  <p className="text-[11px] text-[var(--text-muted)] italic">
+                    None - use the Workforce tab to nominate employees.
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -777,8 +803,8 @@ export default function GamePage() {
                       .map((e: any) => (
                         <div key={e.id} className="flex items-center justify-between text-[12px]">
                           <div>
-                            <span className="font-medium text-slate-300">{e.name}</span>
-                            <span className="text-slate-600 ml-2 text-[10px]">{e.level} → +15% CTC</span>
+                            <span className="font-medium text-[var(--text)]">{e.name}</span>
+                            <span className="text-[var(--text-muted)] ml-2 text-[10px]">{e.level} → +15% CTC</span>
                           </div>
                           <Check className="w-3.5 h-3.5 text-emerald-500" />
                         </div>
@@ -797,14 +823,14 @@ export default function GamePage() {
                 <button
                   id="submit-decisions-btn"
                   onClick={handleSubmit}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-xl transition-colors flex items-center justify-center gap-2 group"
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-[var(--text)] text-[13px] font-medium rounded-xl transition-colors flex items-center justify-center gap-2 group"
                 >
                   Submit Round {round} Decisions
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               )}
 
-              <p className="text-[10px] text-slate-700 text-center">
+              <p className="text-[10px] text-[var(--text-muted)] text-center">
                 Decisions are final once submitted. The professor advances the round.
               </p>
             </div>
@@ -819,20 +845,20 @@ export default function GamePage() {
           onClick={() => setPulse(null)}
         >
           <div
-            className="w-full max-w-md bg-[#0d1a2e] border border-white/[0.08] rounded-2xl p-8 shadow-2xl animate-in"
+            className="w-full max-w-md bg-[var(--surface-alt)] border border-[var(--border)] rounded-2xl p-8 shadow-2xl animate-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+            <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-1">
               Confidential 1-on-1
             </p>
-            <p className="text-[11px] text-slate-600 mb-5">{pulse.role}</p>
-            <h3 className="font-display text-2xl font-bold italic text-white mb-6">{pulse.name}</h3>
-            <div className="border-l-2 border-slate-700 pl-5 mb-7">
+            <p className="text-[11px] text-[var(--text-muted)] mb-5">{pulse.role}</p>
+            <h3 className="font-display text-2xl font-bold italic text-[var(--text)] mb-6">{pulse.name}</h3>
+            <div className="border-l-2 border-[var(--border)] pl-5 mb-7">
               <p className="prose-sim italic">"{pulse.quote}"</p>
             </div>
             <button
               onClick={() => setPulse(null)}
-              className="w-full py-2.5 text-[12px] text-slate-500 border border-slate-800 rounded-lg hover:border-slate-600 hover:text-slate-300 transition-colors"
+              className="w-full py-2.5 text-[12px] text-[var(--text-muted)] border border-[var(--border)] rounded-lg hover:border-[var(--border)] hover:text-[var(--text)] transition-colors"
             >
               Close
             </button>
@@ -844,7 +870,7 @@ export default function GamePage() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  LEVER CARD — reusable decision control
+//  LEVER CARD - reusable decision control
 // ════════════════════════════════════════════════════════════════════════════
 
 function LeverCard({
@@ -857,13 +883,13 @@ function LeverCard({
   children: React.ReactNode;
 }) {
   return (
-    <div id={id} className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-5 space-y-4">
+    <div id={id} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-[0.13em]">{label}</p>
-          <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">{description}</p>
+          <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.13em]">{label}</p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">{description}</p>
         </div>
-        <span className="text-2xl font-bold font-mono text-white shrink-0">{displayValue}</span>
+        <span className="text-2xl font-bold font-mono text-[var(--text)] shrink-0">{displayValue}</span>
       </div>
       {children}
     </div>
@@ -888,8 +914,8 @@ function OnboardingScreen({
   return (
     <div className="slide-root">
       <header className="slide-header">
-        <span className="text-[12px] font-medium text-slate-500">BharatQuick · Case Study</span>
-        <span className="text-[11px] text-slate-700">{playerName}</span>
+        <span className="text-[12px] font-medium text-[var(--text-muted)]">BharatQuick · Case Study</span>
+        <span className="text-[11px] text-[var(--text-muted)]">{playerName}</span>
       </header>
 
       <main className="slide-main">
@@ -919,7 +945,7 @@ function OnboardingScreen({
           {onBack && (
             <button
               onClick={onBack}
-              className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-400 transition-colors"
+              className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
             >
               <ChevronLeft className="w-3.5 h-3.5" /> Back
             </button>
@@ -927,7 +953,7 @@ function OnboardingScreen({
           <button
             id="onboarding-next-btn"
             onClick={onNext}
-            className="flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-[var(--text)] text-[13px] font-medium rounded-lg transition-colors"
           >
             {isLast ? 'Begin Simulation' : 'Continue'}
             <ChevronRight className="w-4 h-4" />
@@ -948,16 +974,16 @@ function TextSlide({ slide }: { slide: OnboardingSlide }) {
 
   return (
     <div className="max-w-5xl mx-auto px-10 lg:px-16 py-14">
-      <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-5">
+      <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.22em] mb-5">
         {slide.category}
       </p>
-      <h1 className="font-display text-[3.2rem] lg:text-[4rem] font-bold italic text-white leading-none mb-2">
+      <h1 className="font-display text-[3.2rem] lg:text-[4rem] font-bold italic text-[var(--text)] leading-none mb-2">
         {slide.headline}
       </h1>
       {slide.subheadline && (
-        <p className="text-base text-slate-500 font-light mb-8">{slide.subheadline}</p>
+        <p className="text-base text-[var(--text-muted)] font-light mb-8">{slide.subheadline}</p>
       )}
-      <div className="h-px bg-white/[0.06] mb-10" />
+      <div className="h-px bg-[var(--surface-alt)] mb-10" />
       <div className={twoCol ? 'grid grid-cols-1 lg:grid-cols-2 gap-12' : 'max-w-2xl'}>
         <div className="prose-sim space-y-5">{left.map((p, i) => <p key={i}>{p}</p>)}</div>
         {twoCol && (
@@ -973,22 +999,22 @@ function TextSlide({ slide }: { slide: OnboardingSlide }) {
 function MemoSlide({ slide }: { slide: OnboardingSlide }) {
   return (
     <div className="max-w-3xl mx-auto px-10 lg:px-16 py-14">
-      <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-5">
+      <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.22em] mb-5">
         {slide.category}
       </p>
-      <h1 className="font-display text-[2.6rem] font-bold italic text-white leading-tight mb-1">
+      <h1 className="font-display text-[2.6rem] font-bold italic text-[var(--text)] leading-tight mb-1">
         {slide.headline}
       </h1>
       {slide.subheadline && (
-        <p className="text-[13px] text-slate-500 font-light mb-8">{slide.subheadline}</p>
+        <p className="text-[13px] text-[var(--text-muted)] font-light mb-8">{slide.subheadline}</p>
       )}
-      <div className="h-px bg-white/[0.06] mb-10" />
+      <div className="h-px bg-[var(--surface-alt)] mb-10" />
       {slide.memo && (
-        <p className="text-[10px] text-slate-600 font-mono uppercase tracking-wider mb-6">
+        <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider mb-6">
           From: {slide.memo.from}
         </p>
       )}
-      <div className="border-l-2 border-slate-800 pl-8">
+      <div className="border-l-2 border-[var(--border)] pl-8">
         <div className="prose-sim space-y-5">
           {slide.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
         </div>
@@ -1002,13 +1028,13 @@ function MemoSlide({ slide }: { slide: OnboardingSlide }) {
 function GuideSlide({ slide }: { slide: OnboardingSlide }) {
   return (
     <div className="max-w-6xl mx-auto px-10 lg:px-16 py-12">
-      <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-4">
+      <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.22em] mb-4">
         {slide.category}
       </p>
-      <h1 className="font-display text-[2.6rem] font-bold italic text-white mb-6">
+      <h1 className="font-display text-[2.6rem] font-bold italic text-[var(--text)] mb-6">
         {slide.headline}
       </h1>
-      <div className="h-px bg-white/[0.06] mb-8" />
+      <div className="h-px bg-[var(--surface-alt)] mb-8" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
 
         {/* Left: intro paragraphs + glossary */}
@@ -1018,14 +1044,14 @@ function GuideSlide({ slide }: { slide: OnboardingSlide }) {
           </div>
           {slide.glossary && (
             <>
-              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-4">
+              <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-4">
                 Key Terms
               </p>
               <div className="space-y-4">
                 {slide.glossary.map((g, i) => (
                   <div key={i}>
-                    <span className="text-[12px] font-semibold text-slate-300">{g.term}</span>
-                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{g.definition}</p>
+                    <span className="text-[12px] font-semibold text-[var(--text)]">{g.term}</span>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{g.definition}</p>
                   </div>
                 ))}
               </div>
@@ -1036,7 +1062,7 @@ function GuideSlide({ slide }: { slide: OnboardingSlide }) {
         {/* Right: decision levers */}
         {slide.levers && (
           <div>
-            <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-4">
+            <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-4">
               Decision Levers
             </p>
             <div className="space-y-4">
@@ -1046,8 +1072,8 @@ function GuideSlide({ slide }: { slide: OnboardingSlide }) {
                     <span className="text-[9px] font-bold text-indigo-400">{i + 1}</span>
                   </div>
                   <div>
-                    <p className="text-[12px] font-semibold text-slate-300">{lv.name}</p>
-                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{lv.description}</p>
+                    <p className="text-[12px] font-semibold text-[var(--text)]">{lv.name}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{lv.description}</p>
                   </div>
                 </div>
               ))}
@@ -1078,14 +1104,14 @@ function RoundBriefScreen({
   return (
     <div className="slide-root">
       <header className="slide-header">
-        <span className="text-[12px] font-medium text-slate-500">BharatQuick · Case Study</span>
+        <span className="text-[12px] font-medium text-[var(--text-muted)]">BharatQuick · Case Study</span>
         <div className="flex items-center gap-4">
           {prevScore !== null && (
-            <span className="text-[11px] text-slate-600 font-mono">
+            <span className="text-[11px] text-[var(--text-muted)] font-mono">
               HES: <span className="text-indigo-400 font-semibold">{prevScore}</span>
             </span>
           )}
-          <span className="text-[11px] text-slate-700">{playerName}</span>
+          <span className="text-[11px] text-[var(--text-muted)]">{playerName}</span>
         </div>
       </header>
 
@@ -1093,35 +1119,35 @@ function RoundBriefScreen({
         <div className="max-w-6xl mx-auto px-10 lg:px-16 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
 
-            {/* Story — left 3 cols */}
+            {/* Story - left 3 cols */}
             <div className="lg:col-span-3">
-              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-4">
+              <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.22em] mb-4">
                 {story.act}
               </p>
-              <h1 className="font-display text-[3rem] lg:text-[3.5rem] font-bold italic text-white leading-tight mb-8">
+              <h1 className="font-display text-[3rem] lg:text-[3.5rem] font-bold italic text-[var(--text)] leading-tight mb-8">
                 {story.title}
               </h1>
-              <div className="h-px bg-white/[0.06] mb-8" />
+              <div className="h-px bg-[var(--surface-alt)] mb-8" />
               <div className="prose-sim space-y-5">
                 {story.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
               </div>
             </div>
 
-            {/* Available actions — right 2 cols */}
+            {/* Available actions - right 2 cols */}
             <div className="lg:col-span-2">
-              <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6 sticky top-8">
-                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-5">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 sticky top-8">
+                <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-5">
                   Available Actions This Round
                 </p>
                 <div className="space-y-4">
                   {story.available_actions.map((action, i) => (
                     <div key={i} className="flex gap-3">
-                      <div className="w-5 h-5 rounded bg-white/[0.04] flex-shrink-0 flex items-center justify-center mt-0.5">
-                        <span className="text-[9px] font-semibold text-slate-600">{i + 1}</span>
+                      <div className="w-5 h-5 rounded bg-[var(--surface-alt)] flex-shrink-0 flex items-center justify-center mt-0.5">
+                        <span className="text-[9px] font-semibold text-[var(--text-muted)]">{i + 1}</span>
                       </div>
                       <div>
-                        <p className="text-[12px] font-semibold text-slate-300">{action.name}</p>
-                        <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{action.description}</p>
+                        <p className="text-[12px] font-semibold text-[var(--text)]">{action.name}</p>
+                        <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{action.description}</p>
                       </div>
                     </div>
                   ))}
@@ -1148,7 +1174,7 @@ function RoundBriefScreen({
         <button
           id="enter-round-btn"
           onClick={onEnter}
-          className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors group"
+          className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-[var(--text)] text-[13px] font-medium rounded-lg transition-colors group"
         >
           Enter Round {round}
           <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -1179,29 +1205,29 @@ function EndScreen({
     <div className="min-h-screen bg-[#050a18] bg-grid flex flex-col items-center justify-center p-8">
       <div className="w-full max-w-md text-center">
 
-        <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-6">
+        <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.22em] mb-6">
           Simulation Complete · CompSim Pro
         </p>
-        <h1 className="font-display text-[3rem] font-bold italic text-white leading-none mb-2">
+        <h1 className="font-display text-[3rem] font-bold italic text-[var(--text)] leading-none mb-2">
           BharatQuick
         </h1>
-        <p className="text-[13px] text-slate-500 font-light mb-1">Total Rewards Strategy Simulation</p>
-        <p className="text-[11px] text-slate-700 mb-10">MBA Case Study</p>
+        <p className="text-[13px] text-[var(--text-muted)] font-light mb-1">Total Rewards Strategy Simulation</p>
+        <p className="text-[11px] text-[var(--text-muted)] mb-10">MBA Case Study</p>
 
-        <div className="h-px bg-white/[0.06] mb-10" />
+        <div className="h-px bg-[var(--surface-alt)] mb-10" />
 
-        <p className="text-[14px] font-medium text-slate-300 mb-0.5">{playerName}</p>
-        <p className="text-[11px] text-slate-600 mb-10">Compensation Lead, Total Rewards · BharatQuick</p>
+        <p className="text-[14px] font-medium text-[var(--text)] mb-0.5">{playerName}</p>
+        <p className="text-[11px] text-[var(--text-muted)] mb-10">Compensation Lead, Total Rewards · BharatQuick</p>
 
         {/* HES score */}
-        <div className="inline-flex flex-col items-center bg-[#0c1423] border border-white/[0.06] rounded-2xl px-12 py-8 mb-8 w-full">
-          <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-2">
+        <div className="inline-flex flex-col items-center bg-[var(--surface)] border border-[var(--border)] rounded-2xl px-12 py-8 mb-8 w-full">
+          <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.18em] mb-2">
             Final Human Equity Score
           </p>
           <div className="text-[5rem] font-bold font-mono text-indigo-400 leading-none mb-2">
             {score}
           </div>
-          <div className="text-[11px] font-medium text-slate-500">{label}</div>
+          <div className="text-[11px] font-medium text-[var(--text-muted)]">{label}</div>
         </div>
 
         {/* Final metrics */}
@@ -1209,19 +1235,20 @@ function EndScreen({
           {[
             { l: 'Engagement',  v: fmtPct(metrics.engagement ?? 0.75) },
             { l: 'Turnover',    v: fmtPct(metrics.turnover ?? 0.08)    },
-            { l: 'Parity p',    v: metrics.pValue?.toFixed(3) ?? '—'   },
+            { l: 'Parity p',    v: metrics.pValue?.toFixed(3) ?? '-'   },
           ].map((m) => (
-            <div key={m.l} className="bg-[#0c1423] border border-white/[0.05] rounded-xl p-4">
-              <div className="text-xl font-bold font-mono text-slate-200 mb-1">{m.v}</div>
-              <div className="text-[9px] text-slate-600 uppercase tracking-wider">{m.l}</div>
+            <div key={m.l} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+              <div className="text-xl font-bold font-mono text-[var(--text)] mb-1">{m.v}</div>
+              <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">{m.l}</div>
             </div>
           ))}
         </div>
 
-        <p className="text-[11px] text-slate-600 leading-relaxed">
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
           Your decisions across six quarters have shaped BharatQuick's compensation strategy and IPO readiness. Debrief with your class to discuss the trade-offs and alternative approaches.
         </p>
       </div>
     </div>
   );
 }
+

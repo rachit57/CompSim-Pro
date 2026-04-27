@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -22,18 +22,18 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050a18] bg-grid flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-[var(--bg)] bg-grid flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-xs">
 
         {/* Brand */}
         <div className="text-center mb-12">
-          <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-5">
+          <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.22em] mb-5">
             MBA · Compensation &amp; Benefits
           </p>
-          <h1 className="font-display text-[3.25rem] font-bold italic text-white leading-none mb-3">
+          <h1 className="font-display text-[3.25rem] font-bold italic text-[var(--text)] leading-none mb-3">
             BharatQuick
           </h1>
-          <p className="text-[13px] text-slate-500 font-light">
+          <p className="text-[13px] text-[var(--text-muted)] font-light">
             Total Rewards Strategy Simulation
           </p>
         </div>
@@ -44,7 +44,7 @@ export default function Home() {
         {/* Form */}
         <form onSubmit={handleJoin} className="space-y-4">
           <div>
-            <label className="block text-[10px] font-medium text-slate-600 uppercase tracking-[0.15em] mb-2">
+            <label className="block text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.15em] mb-2">
               Session Code
             </label>
             <input
@@ -57,12 +57,12 @@ export default function Home() {
               maxLength={12}
               autoComplete="off"
               autoFocus
-              className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-slate-700 text-sm font-mono tracking-widest outline-none focus:border-indigo-500/40 focus:bg-white/[0.06] transition-colors"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-[var(--text)] placeholder-slate-700 text-sm font-mono tracking-widest outline-none focus:border-indigo-500/40 focus:bg-[var(--surface)] transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-medium text-slate-600 uppercase tracking-[0.15em] mb-2">
+            <label className="block text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.15em] mb-2">
               Full Name
             </label>
             <input
@@ -73,7 +73,7 @@ export default function Home() {
               onChange={(e) => { setName(e.target.value); setError(''); }}
               placeholder="First and Last Name"
               autoComplete="name"
-              className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-slate-700 text-sm outline-none focus:border-indigo-500/40 focus:bg-white/[0.06] transition-colors"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-[var(--text)] placeholder-slate-700 text-sm outline-none focus:border-indigo-500/40 focus:bg-[var(--surface)] transition-colors"
             />
           </div>
 
@@ -84,7 +84,7 @@ export default function Home() {
           <button
             id="enter-simulation-btn"
             type="submit"
-            className="w-full mt-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors"
+            className="w-full mt-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-[var(--text)] text-[13px] font-medium rounded-lg transition-colors"
           >
             Enter Simulation
           </button>
@@ -95,7 +95,7 @@ export default function Home() {
           <button
             id="professor-access-btn"
             onClick={() => router.push('/admin')}
-            className="text-[10px] text-slate-700 hover:text-slate-500 transition-colors"
+            className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
           >
             Professor Access
           </button>
@@ -105,3 +105,4 @@ export default function Home() {
     </div>
   );
 }
+
