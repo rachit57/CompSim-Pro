@@ -200,10 +200,15 @@ function processRound(decisions, rawWorkforce, round) {
     outcomes: employeeOutcomes
   };
 
-  const hesValue = (metrics.engagement * 30) + (metrics.roi * 30) + (Math.max(0, 100 - metrics.turnover * 400) * 0.2) + (metrics.pValue > 0.05 ? 20 : 5);
+  const roiScore = (metrics.roi / 5) * 40; // Max 40
+  const engagementScore = metrics.engagement * 30; // Max 30
+  const equityScore = (0.1 / metrics.pValue) * 10; // Better pValue (lower) = higher score. If pValue=0.05, score=20. Max 30.
+  const turnoverPenalty = metrics.turnover > 0.1 ? (metrics.turnover - 0.1) * 200 : 0; // High penalty if >10%
+  
+  const hesValue = roiScore + engagementScore + Math.min(30, equityScore) - turnoverPenalty;
   
   return { 
-    hes: Math.min(100, hesValue).toFixed(2), 
+    hes: Math.max(0, Math.min(100, hesValue)).toFixed(2), 
     metrics,
     updatedWorkforce: workforce
   };
