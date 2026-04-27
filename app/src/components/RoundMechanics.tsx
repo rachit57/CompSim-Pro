@@ -91,26 +91,56 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
   }
 
   if (round === 3) {
+    const wE = decisions.wEbitda || 0;
+    const wD = decisions.wDiv || 0;
+    const wI = decisions.wInd || 0;
+    const total = wE + wD + wI;
+    
     return (
       <div className="space-y-5">
-        <h2 className="text-[13px] font-semibold text-[var(--text)]">Variable Pay Formula (Merit Matrix)</h2>
-        <LeverCard id="thresh" label="Threshold Payout (Rating ≤ 2)" description="Multiplier awarded to low performers." displayValue={`${(decisions.thresh || 0)}×`}>
-          <input type="range" min={0} max={0.5} step={0.1} value={decisions.thresh || 0} onChange={e => update('thresh', Number(e.target.value))} style={{ background: sliderBg((decisions.thresh || 0) / 0.5) }} />
-        </LeverCard>
-        <LeverCard id="max" label="Max Accelerator (Rating = 5)" description="Maximum multiplier awarded to top talent." displayValue={`${(decisions.max || 1.5)}×`}>
-          <input type="range" min={1.0} max={2.5} step={0.1} value={decisions.max || 1.5} onChange={e => update('max', Number(e.target.value))} style={{ background: sliderBg(((decisions.max || 1.5) - 1.0) / 1.5) }} />
-        </LeverCard>
-        <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)]">
-          <label className="block text-[12px] font-medium text-[var(--text)] mb-2">Compa-Ratio Catchup Strategy</label>
-          <select 
-            className="bg-[var(--surface-alt)] border border-[var(--border)] text-[var(--text)] text-[12px] rounded p-2 w-full"
-            value={decisions.crStrategy || 'none'}
-            onChange={e => update('crStrategy', e.target.value)}
-          >
-            <option value="none">Flat Distribution</option>
-            <option value="moderate">Moderate Catch-up (Higher % to lower CRs)</option>
-            <option value="aggressive">Aggressive Parity (Heavily penalize high CRs)</option>
-          </select>
+        <h2 className="text-[13px] font-semibold text-[var(--text)]">Advanced Matrix Builder</h2>
+        <p className="text-[11px] text-[var(--text-muted)]">Allocate 100 weighting points across performance components.</p>
+        
+        <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] space-y-4">
+          {[
+            { id: 'wEbitda', label: 'Company EBITDA %', val: wE },
+            { id: 'wDiv', label: 'Division KPI %', val: wD },
+            { id: 'wInd', label: 'Individual Rating %', val: wI },
+          ].map(comp => (
+            <div key={comp.id} className="flex justify-between items-center">
+              <label className="text-[12px] text-[var(--text)]">{comp.label}</label>
+              <input 
+                type="number" min="0" max="100" 
+                className="bg-[var(--surface-alt)] border border-[var(--border)] rounded px-2 py-1 text-[12px] w-20 text-[var(--text)] text-right font-mono"
+                value={comp.val}
+                onChange={e => update(comp.id, Number(e.target.value))}
+              />
+            </div>
+          ))}
+          <div className={`flex justify-between items-center pt-2 border-t border-[var(--border)] text-[12px] font-mono font-bold ${total === 100 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <span>Total Weight</span>
+            <span>{total} / 100</span>
+          </div>
+        </div>
+
+        <h3 className="text-[12px] font-medium text-[var(--text-muted)]">Multiplier Curve</h3>
+        <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] grid grid-cols-5 gap-2">
+          {[1,2,3,4,5].map(rating => (
+            <div key={rating} className="flex flex-col items-center">
+              <span className="text-[10px] text-[var(--text-muted)] mb-1">R{rating}</span>
+              <input 
+                type="number" step="0.1"
+                className="bg-[var(--surface-alt)] border border-[var(--border)] rounded px-1 py-1 text-[11px] w-full text-[var(--text)] text-center font-mono"
+                placeholder="1.0x"
+                value={decisions?.curve?.[rating] || ''}
+                onChange={e => {
+                  const curve = { ...(decisions.curve || {}) };
+                  curve[rating] = Number(e.target.value);
+                  update('curve', curve);
+                }}
+              />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -171,38 +201,49 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
   }
 
   if (round === 6) {
+    const VIPs = workforce.filter((e: any) => e.performance >= 4 && e.tier === 1).slice(0, 4);
+    const budget = 2000000;
+    const spent = Object.values(decisions.exceptions || {}).reduce((a: any, b: any) => a + Number(b), 0) as number;
+    const remaining = budget - spent;
+
     return (
       <div className="space-y-5">
-        <h2 className="text-[13px] font-semibold text-[var(--text)]">Final Merit Grid & Exception Triage</h2>
-        <p className="text-[11px] text-[var(--text-muted)]">Your formula generated the matrix below. You must now process VP exceptions.</p>
+        <div className="flex justify-between items-end">
+          <h2 className="text-[13px] font-semibold text-[var(--text)]">VP Exception Triage</h2>
+          <div className="text-right">
+            <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Remaining Discretionary Budget</div>
+            <div className={`text-[14px] font-mono font-bold ${remaining < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              {fmtLPA(remaining)}
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-[var(--text-muted)]">These 4 critical employees have submitted ultimatums. Allocate the remaining discretionary budget to retain them. If you overspend, you fail the IPO audit.</p>
         
-        <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] overflow-x-auto">
-          <table className="w-full text-left text-[11px] text-[var(--text)]">
-            <thead>
-              <tr className="border-b border-[var(--border)] text-[var(--text-muted)]">
-                <th className="pb-2">Performance</th>
-                <th className="pb-2">Suggested Merit Increase</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-[var(--border)]">
-                <td className="py-2">5 - Outstanding</td>
-                <td className="py-2 text-emerald-400 font-mono">15%</td>
-              </tr>
-              <tr className="border-b border-[var(--border)]">
-                <td className="py-2">4 - Exceeds</td>
-                <td className="py-2 text-emerald-400 font-mono">8%</td>
-              </tr>
-              <tr className="border-b border-[var(--border)]">
-                <td className="py-2">3 - Meets</td>
-                <td className="py-2 text-amber-400 font-mono">4%</td>
-              </tr>
-              <tr>
-                <td className="py-2">≤ 2 - Below</td>
-                <td className="py-2 text-red-400 font-mono">0%</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {VIPs.map((emp: any) => (
+            <div key={emp.id} className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)]">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <div className="text-[12px] font-medium text-[var(--text)]">{emp.name}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Grade: {emp.level} | Comp-Ratio: {(emp.currentPay / emp.marketMid).toFixed(2)}</div>
+                </div>
+                <input 
+                  type="number" step="50000"
+                  className={`bg-[var(--surface-alt)] border rounded px-2 py-1 text-[12px] w-28 text-[var(--text)] text-right font-mono ${remaining < 0 ? 'border-red-500/50' : 'border-[var(--border)]'}`}
+                  placeholder="₹ Allocation"
+                  value={decisions?.exceptions?.[emp.id] || ''}
+                  onChange={e => {
+                    const ex = { ...(decisions.exceptions || {}) };
+                    ex[emp.id] = Number(e.target.value);
+                    update('exceptions', ex);
+                  }}
+                />
+              </div>
+              <div className="text-[10px] text-amber-500/90 bg-amber-500/10 px-2 py-1.5 rounded italic">
+                "{emp.id === 'N5' ? 'I have an offer from Dubai. Match market P90 or I sign tomorrow.' : 'My team carried the quarter. My base needs adjusting.'}"
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

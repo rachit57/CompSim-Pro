@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 //  COMPSIM PRO - NARRATIVE ENGINE v4.0
 //  Case Study: BharatQuick | "Deductive Leadership"
 // ============================================================
@@ -278,5 +278,42 @@ export const CASE_STUDY_BRIEFING = {
     5: 'Executive Alignment - Rebalance LTI/STI mix to align leadership with IPO value creation',
     6: 'IPO Certification - Complete People Due Diligence with a clean, defensible compensation record',
   },
+};
+
+// ─────────────────────────────────────────────────────────────
+//  DYNAMIC MARKET SIGNALS - Distractors & Data per Round
+// ─────────────────────────────────────────────────────────────
+
+export const MARKET_SIGNALS_PER_ROUND: Record<number, any[]> = {
+  1: [
+    { label: 'Competitor Intel', level: 'Noise', note: 'DunzoScale announces a freeze on base pay hikes to focus entirely on variable bonuses. (Aon Hewitt disputes this approach).' },
+    { label: 'Bengaluru Tech', level: 'Critical', note: 'Tier-1 engineering talent now treats LTI as a primary decision factor. Firms without meaningful equity upside are screened out.' },
+    { label: 'Macro Report', level: 'Noise', note: 'Consumer inflation in Tier-3 cities hits 7%. Labor unions pushing for flat rupee increases.' }
+  ],
+  2: [
+    { label: 'Sales Sector', level: 'High', note: 'Competitor SwiggyInsta launched a 2.5x accelerator last month. Three BharatQuick AMs have since accepted recruiter calls.' },
+    { label: 'Startup Rumor', level: 'Noise', note: 'A leak suggests a major competitor is eliminating commissions entirely in favor of high fixed salaries. Unverified.' },
+    { label: 'Market Study', level: 'Critical', note: 'Data shows Tier-2 operations talent values 15% base pay increases more than 30% variable pay.' }
+  ],
+  3: [
+    { label: 'Internal Comms', level: 'Noise', note: 'Survey results say 80% of employees want free gym memberships instead of higher bonuses. (HR flagged as low sample size).' },
+    { label: 'Compliance Risk', level: 'Critical', note: 'SEBI tightens pay disparity reporting. Any department-level variance above 15% will require formal Board justification.' },
+    { label: 'Industry Trend', level: 'Noise', note: 'Articles claim the "Matrix Formula" for variable pay is dead and subjective bonuses are returning.' }
+  ],
+  4: [
+    { label: 'Expat Market', level: 'Critical', note: 'Dubai and Singapore logistics firms are actively targeting India\'s top 5% performers with 2x tax-free multipliers.' },
+    { label: 'VC Advice', level: 'Noise', note: 'A board advisor suggests cutting LTI entirely to boost short-term EBITDA. (Directly contradicts IPO underwriter requirements).' },
+    { label: 'Benchmarking', level: 'High', note: 'Standard 4-year linear vesting is losing ground to 1-year cliffs with massive back-weighted 4th year payouts to trap talent.' }
+  ],
+  5: [
+    { label: 'Underwriter Note', level: 'Critical', note: 'Kotak Mahindra explicitly warns that executive cash bonuses exceeding 60% of total comp will trigger a governance flag.' },
+    { label: 'Executive Gossip', level: 'Noise', note: 'Rumors that the VP of Sales will quit if LTI mix exceeds 20%. (Unlikely given his recent stock purchases).' },
+    { label: 'Market Study', level: 'Noise', note: 'Executives claim they work 40% harder when base pay is reduced. (Study funded by a VC firm).' }
+  ],
+  6: [
+    { label: 'Audit Committee', level: 'Critical', note: 'The IPO auditors will mathematically fail the compensation architecture if discretionary budgets are exceeded.' },
+    { label: 'VP Ultimatum', level: 'High', note: 'Sneha (N5) and other critical nodes are demanding immediate out-of-cycle retention grants or they walk.' },
+    { label: 'Noise', level: 'Noise', note: 'An anonymous Slack message claims the company is bankrupt. (Finance confirms ₹1,200 Cr in bank).' }
+  ]
 };
 

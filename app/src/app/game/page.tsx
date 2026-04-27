@@ -10,6 +10,7 @@ import {
   EMPLOYEE_PULSE,
   NARRATIVE_DOSSIER,
   CASE_STUDY_BRIEFING,
+  MARKET_SIGNALS_PER_ROUND,
   type OnboardingSlide,
   type RoundStory,
 } from '@/lib/narrative';
@@ -118,7 +119,7 @@ export default function GamePage() {
 
   if (!hydrated || !sessionData) {
     return (
-      <div className="min-h-screen bg-[#050a18] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
         <div className="text-center">
           <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-xs text-[var(--text-muted)]">Connecting to session…</p>
@@ -133,7 +134,7 @@ export default function GamePage() {
   const metrics         = myPlayer?.metrics ?? {
     budgetUtil: 0, turnover: 0.08, engagement: 0.75, pValue: 0.082, roi: 0,
   };
-  const workforce: any[] = sessionData.workforce ?? [];
+  const workforce: any[] = myPlayer?.workforce ?? sessionData.workforce ?? [];
 
   // ── SUBMIT ────────────────────────────────────────────────────────────────
 
@@ -254,7 +255,7 @@ export default function GamePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050a18] text-[var(--text)] flex flex-col">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
 
       {/* Error banner */}
       {errMsg && (
@@ -264,11 +265,25 @@ export default function GamePage() {
       )}
 
       {/* Top header */}
-      <header className="flex-none h-12 border-b border-[var(--border)] px-6 flex items-center justify-between bg-[#050a18]/95 sticky top-0 z-40 backdrop-blur-sm">
+      <header className="flex-none h-12 border-b border-[var(--border)] px-6 flex items-center justify-between bg-[var(--bg)] sticky top-0 z-40 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <span className="text-[13px] font-semibold text-[var(--text)]">BharatQuick</span>
           <span className="text-[var(--text-muted)]">·</span>
           <span className="text-[11px] text-[var(--text-muted)]">CompSim Pro</span>
+          <div className="ml-8 flex items-center gap-6 hidden md:flex">
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium">HES Score</span>
+              <span className={`text-[12px] font-mono font-bold ${myPlayer?.score >= 65 ? 'text-emerald-500' : 'text-amber-500'}`}>{myPlayer?.score ?? '-'}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium">Budget Utilized</span>
+              <span className="text-[12px] font-mono font-semibold text-[var(--text)]">{metrics.budgetUtil.toFixed(2)} Cr</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium">Flight Risk</span>
+              <span className={`text-[12px] font-mono font-bold ${metrics.turnover < 0.1 ? 'text-[var(--text)]' : 'text-red-500'}`}>{fmtPct(metrics.turnover)}</span>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-5">
           <button
@@ -411,12 +426,12 @@ export default function GamePage() {
                         }`}
                       >
                         <div
-                          className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-semibold mt-0.5 ${
+                          className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-semibold mt-0.5 border ${
                             n < round
-                              ? 'bg-emerald-700/25 text-emerald-500'
+                              ? 'bg-emerald-700/25 text-emerald-500 border-emerald-900/50'
                               : n === round
-                              ? 'bg-indigo-600 text-[var(--text)]'
-                              : 'bg-slate-800 text-[var(--text-muted)]'
+                              ? 'bg-indigo-600 text-white border-transparent'
+                              : 'bg-[var(--surface-alt)] text-[var(--text-muted)] border-[var(--border)]'
                           }`}
                         >
                           {n < round ? '✓' : r}
@@ -453,7 +468,7 @@ export default function GamePage() {
                       </div>
                       <div className="text-[var(--text-muted)] ml-2 border-l border-[var(--border)] pl-2 mt-1 py-0.5">
                         <span className="text-[9px] uppercase tracking-wider">Talks to:</span>{' '}
-                        {emp.connections.join(', ')}
+                        <span className="text-[var(--text)] font-medium">{emp.connections.join(', ')}</span>
                       </div>
                     </div>
                   ))}
@@ -462,7 +477,6 @@ export default function GamePage() {
             </div>
 
             <div className="lg:col-span-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b border-[var(--border)] flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-[13px] font-semibold text-[var(--text)]">Workforce Master File</h2>
@@ -486,14 +500,11 @@ export default function GamePage() {
                       <th className="text-center px-4 py-3">Perf</th>
                       <th className="text-right px-4 py-3">CTC</th>
                       <th className="text-right px-4 py-3">Comp-Ratio</th>
-                      <th className="text-center px-4 py-3">Flag</th>
                       <th className="text-right px-6 py-3">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
+                  <tbody className="divide-y divide-[var(--border)]">
                     {workforce.map((emp: any) => {
-                      const cr           = emp.currentPay / emp.marketMid;
-                      const isRisk       = cr < 0.85;
                       const wasInterviewed = interviewed.includes(emp.id);
                       const isPromoted   = promoted.includes(emp.id);
 
@@ -504,7 +515,7 @@ export default function GamePage() {
                             <div className="text-[10px] text-[var(--text-muted)]">{emp.role}</div>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className="text-[10px] font-mono text-[var(--text-muted)] bg-slate-800/50 px-2 py-0.5 rounded">
+                            <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 rounded">
                               {emp.level}
                             </span>
                           </td>
@@ -528,26 +539,10 @@ export default function GamePage() {
                           </td>
                           <td className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <div className="w-10 h-1 bg-[var(--border)] rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    isRisk ? 'bg-red-500' : cr > 1.1 ? 'bg-amber-500' : 'bg-emerald-600'
-                                  }`}
-                                  style={{ width: `${Math.min(cr * 88, 100)}%` }}
-                                />
-                              </div>
-                              <span className={`text-[11px] font-mono font-medium ${
-                                isRisk ? 'text-red-400' : cr > 1.1 ? 'text-amber-400' : 'text-[var(--text-muted)]'
-                              }`}>
+                              <span className="text-[11px] font-mono font-medium text-[var(--text)]">
                                 {fmtCR(emp.currentPay, emp.marketMid)}
                               </span>
                             </div>
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
-                            {isRisk
-                              ? <span className="text-[9px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">Risk</span>
-                              : <span className="text-[9px] font-medium text-[var(--text-muted)] bg-[var(--surface-alt)] px-2 py-0.5 rounded-full border border-[var(--border)]">Stable</span>
-                            }
                           </td>
                           <td className="px-6 py-3.5">
                             <div className="flex justify-end gap-2">
@@ -594,7 +589,6 @@ export default function GamePage() {
                 </p>
               </div>
             </div>
-          </div>
           </div>
         )}
 
@@ -653,35 +647,14 @@ export default function GamePage() {
                   Market Signals
                 </p>
                 <div className="space-y-5">
-                  {[
-                    {
-                      label:  'Bengaluru Tech',
-                      level:  'Critical',
-                      note:   'Tier-1 engineering talent now treats LTI as a primary decision factor. Firms without meaningful equity upside are being screened out at offer stage.',
-                    },
-                    {
-                      label:  'Sales Sector',
-                      level:  'High',
-                      note:   'Competitor DunzoScale launched a 2.5x accelerator last month. Three BharatQuick AMs have since accepted recruiter calls.',
-                    },
-                    {
-                      label:  'International Drain',
-                      level:  'High',
-                      note:   'Spike in Tier-2 and Tier-3 managers receiving UAE expat packages. Effective purchasing-power gap estimated at 2.2× versus INR fixed salary.',
-                    },
-                    {
-                      label:  'Tier-3 Productivity',
-                      level:  'Opportunity',
-                      note:   'Tier-3 employees outperform Tier-1 counterparts on per-rupee productivity by an estimated 34%. Retention ROI is strong at this band.',
-                    },
-                  ].map((s, i) => (
+                  {(MARKET_SIGNALS_PER_ROUND[round] || []).map((s, i) => (
                     <div key={i} className="border-l-2 border-[var(--border)] pl-3.5">
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-[12px] font-medium text-[var(--text)]">{s.label}</span>
                         <span className={`text-[9px] font-semibold uppercase tracking-wider ${
                           s.level === 'Critical'    ? 'text-red-500'
                           : s.level === 'High'      ? 'text-amber-500'
-                          : 'text-emerald-500'
+                          : 'text-[var(--text-muted)]'
                         }`}>
                           {s.level}
                         </span>

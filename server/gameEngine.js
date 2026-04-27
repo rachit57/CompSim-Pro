@@ -63,15 +63,19 @@ function processRound(decisions, workforce, round) {
     });
   }
 
-  // --- ROUND 3: Formula Making ---
-  // decisions: { thresh: 0.8, max: 2.0, ebitdaWeight: 0.6, divWeight: 0.2, indWeight: 0.2 }
-  // We just save the formula in the session (or apply a conceptual bonus flag)
+  // --- ROUND 3: Advanced Formula Making ---
+  // decisions: { wEbitda: 40, wDiv: 40, wInd: 20, curve: { 1: 0, 2: 0, 3: 1, 4: 1.5, 5: 2 } }
   if (round === 3) {
+    const totalWeight = (decisions.wEbitda || 0) + (decisions.wDiv || 0) + (decisions.wInd || 0);
+    const valid = totalWeight === 100;
+    
     workforce.forEach(emp => {
-      // Simulate applying the formula
+      // If the weights are invalid (don't equal 100), default to a flat unoptimized curve
       let payout = 1.0;
-      if (emp.performance === 5) payout = decisions.max || 1.5;
-      if (emp.performance <= 2) payout = decisions.thresh || 0;
+      if (valid && decisions.curve) {
+        payout = decisions.curve[emp.performance.toString()] || 1.0;
+        // In a real scenario, we'd blend the EBITDA/Div achievement, but for now we just apply the custom curve
+      }
       emp.projectedBonusMultiplier = payout;
     });
   }
@@ -96,16 +100,27 @@ function processRound(decisions, workforce, round) {
     });
   }
 
-  // --- ROUND 6: Merit Grid ---
-  // decisions: { meritMatrix: { '5': 0.15, '4': 0.08, '3': 0.04 } }
+  // --- ROUND 6: Exception Triage ---
+  // decisions: { exceptions: { 'N5': 1500000, ... } }
   if (round === 6) {
-    const grid = decisions.meritMatrix || { '5': 0.1, '4': 0.05, '3': 0.0 };
-    workforce.forEach(emp => {
-      const increase = grid[emp.performance.toString()] || 0;
-      const amount = emp.currentPay * increase;
-      emp.currentPay += amount;
-      budgetDelta += amount;
-    });
+    let exceptionsTotal = 0;
+    if (decisions.exceptions) {
+      Object.entries(decisions.exceptions).forEach(([id, amt]) => {
+        const emp = workforce.find(w => w.id === id);
+        if (emp && amt > 0) {
+          emp.currentPay += amt;
+          budgetDelta += amt;
+          exceptionsTotal += amt;
+        }
+      });
+    }
+    
+    // Hard failure condition if they overspend the discretionary budget
+    if (exceptionsTotal > 2000000) {
+      workforce.forEach(emp => {
+        emp.lti = 0; // Board wipes equity pool as punishment
+      });
+    }
   }
 
   // Calculate Departmental Averages
