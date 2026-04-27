@@ -94,53 +94,73 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
     const wE = decisions.wEbitda || 0;
     const wD = decisions.wDiv || 0;
     const wI = decisions.wInd || 0;
-    const total = wE + wD + wI;
+    const wT = decisions.wTeam || 0;
+    const wC = decisions.wCsat || 0;
+    const wL = decisions.wLongTerm || 0;
+    const total = wE + wD + wI + wT + wC + wL;
     
     return (
       <div className="space-y-5">
         <h2 className="text-[13px] font-semibold text-[var(--text)]">Advanced Matrix Builder</h2>
-        <p className="text-[11px] text-[var(--text-muted)]">Allocate 100 weighting points across performance components.</p>
+        <p className="text-[11px] text-[var(--text-muted)]">Allocate exactly 100 weighting points across the six performance components. This formula determines how variable pay is funded.</p>
         
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] space-y-4">
-          {[
-            { id: 'wEbitda', label: 'Company EBITDA %', val: wE },
-            { id: 'wDiv', label: 'Division KPI %', val: wD },
-            { id: 'wInd', label: 'Individual Rating %', val: wI },
-          ].map(comp => (
-            <div key={comp.id} className="flex justify-between items-center">
-              <label className="text-[12px] text-[var(--text)]">{comp.label}</label>
-              <input 
-                type="number" min="0" max="100" 
-                className="bg-[var(--surface-alt)] border border-[var(--border)] rounded px-2 py-1 text-[12px] w-20 text-[var(--text)] text-right font-mono"
-                value={comp.val}
-                onChange={e => update(comp.id, Number(e.target.value))}
-              />
-            </div>
-          ))}
-          <div className={`flex justify-between items-center pt-2 border-t border-[var(--border)] text-[12px] font-mono font-bold ${total === 100 ? 'text-emerald-500' : 'text-red-500'}`}>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            {[
+              { id: 'wEbitda', label: 'Company EBITDA %', val: wE },
+              { id: 'wDiv', label: 'Division Revenue %', val: wD },
+              { id: 'wTeam', label: 'Team OKRs %', val: wT },
+              { id: 'wInd', label: 'Individual Rating %', val: wI },
+              { id: 'wCsat', label: 'Customer Sat (CSAT) %', val: wC },
+              { id: 'wLongTerm', label: 'Long-Term Strategy %', val: wL },
+            ].map(comp => (
+              <div key={comp.id} className="flex justify-between items-center">
+                <label className="text-[11px] text-[var(--text)]">{comp.label}</label>
+                <input 
+                  type="number" min="0" max="100" 
+                  className="bg-[var(--surface-alt)] border border-[var(--border)] rounded px-2 py-1 text-[11px] w-16 text-[var(--text)] text-right font-mono"
+                  value={comp.val}
+                  onChange={e => update(comp.id, Number(e.target.value))}
+                />
+              </div>
+            ))}
+          </div>
+          <div className={`flex justify-between items-center pt-3 border-t border-[var(--border)] text-[12px] font-mono font-bold ${total === 100 ? 'text-emerald-500' : 'text-red-500'}`}>
             <span>Total Weight</span>
             <span>{total} / 100</span>
           </div>
         </div>
 
-        <h3 className="text-[12px] font-medium text-[var(--text-muted)]">Multiplier Curve</h3>
-        <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] grid grid-cols-5 gap-2">
-          {[1,2,3,4,5].map(rating => (
-            <div key={rating} className="flex flex-col items-center">
-              <span className="text-[10px] text-[var(--text-muted)] mb-1">R{rating}</span>
-              <input 
-                type="number" step="0.1"
-                className="bg-[var(--surface-alt)] border border-[var(--border)] rounded px-1 py-1 text-[11px] w-full text-[var(--text)] text-center font-mono"
-                placeholder="1.0x"
-                value={decisions?.curve?.[rating] || ''}
-                onChange={e => {
-                  const curve = { ...(decisions.curve || {}) };
-                  curve[rating] = Number(e.target.value);
-                  update('curve', curve);
-                }}
-              />
-            </div>
-          ))}
+        <div className="mt-4">
+          <h3 className="text-[12px] font-medium text-[var(--text)] mb-1">Multiplier Curve Definition</h3>
+          <p className="text-[10px] text-[var(--text-muted)] leading-relaxed mb-3">
+            Define the variable payout multiplier for each performance rating tier (R1: Needs Improvement through R5: Outstanding). 
+            A 1.0x curve pays target bonus. A 0.0x curve pays zero. High multipliers (e.g. 2.0x for R5) drain the budget exponentially faster.
+          </p>
+          <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] grid grid-cols-5 gap-2">
+            {[
+              { r: 1, label: 'R1 (Poor)' },
+              { r: 2, label: 'R2 (Below)' },
+              { r: 3, label: 'R3 (Meets)' },
+              { r: 4, label: 'R4 (Exceeds)' },
+              { r: 5, label: 'R5 (Outstanding)' }
+            ].map(tier => (
+              <div key={tier.r} className="flex flex-col items-center">
+                <span className="text-[9px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{tier.label}</span>
+                <input 
+                  type="number" step="0.1"
+                  className="bg-[var(--surface-alt)] border border-[var(--border)] rounded px-1 py-1 text-[11px] w-full text-[var(--text)] text-center font-mono"
+                  placeholder="1.0x"
+                  value={decisions?.curve?.[tier.r] || ''}
+                  onChange={e => {
+                    const curve = { ...(decisions.curve || {}) };
+                    curve[tier.r] = Number(e.target.value);
+                    update('curve', curve);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

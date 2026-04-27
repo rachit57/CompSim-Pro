@@ -170,9 +170,21 @@ export default function GamePage() {
 
   const handleInterview = (emp: any) => {
     const alreadyDone = interviewed.includes(emp.id);
-    const quote =
-      EMPLOYEE_PULSE[round]?.[emp.id] ??
-      'No additional disclosure this quarter.';
+    let quote = EMPLOYEE_PULSE[round]?.[emp.id];
+    
+    if (!quote) {
+      const cr = emp.currentPay / emp.marketMid;
+      if (cr < 0.85 && emp.performance >= 4) {
+        quote = `I'm delivering top ratings, but my pay is severely below market (${(cr*100).toFixed(0)}% of median). I need a structural adjustment, not just a standard merit hike.`;
+      } else if (cr < 0.85) {
+        quote = `My cost of living has gone up, but my pay hasn't kept pace. I'm struggling with the current band.`;
+      } else if (cr > 1.15) {
+        quote = `I'm very happy with my compensation right now. Just focused on hitting my targets and helping the team.`;
+      } else {
+        quote = `Things are stable. I'm focusing on hitting my targets this quarter. No major concerns right now.`;
+      }
+    }
+
     if (!alreadyDone) {
       if (interviewed.length >= 4) return;
       setInterviewed((prev) => [...prev, emp.id]);
@@ -270,7 +282,7 @@ export default function GamePage() {
           <span className="text-[13px] font-semibold text-[var(--text)]">BharatQuick</span>
           <span className="text-[var(--text-muted)]">·</span>
           <span className="text-[11px] text-[var(--text-muted)]">CompSim Pro</span>
-          <div className="ml-8 flex items-center gap-6 hidden md:flex">
+          <div className="ml-8 flex items-center gap-6">
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium">HES Score</span>
               <span className={`text-[12px] font-mono font-bold ${myPlayer?.score >= 65 ? 'text-emerald-500' : 'text-amber-500'}`}>{myPlayer?.score ?? '-'}</span>
@@ -581,12 +593,6 @@ export default function GamePage() {
                     })}
                   </tbody>
                 </table>
-              </div>
-
-              <div className="px-6 py-2.5 border-t border-[var(--border)] bg-[var(--surface-alt)]">
-                <p className="text-[9px] text-[var(--text-muted)] font-mono">
-                  Comp-Ratio: &lt;0.85 = Risk · 0.85–1.10 = Market · &gt;1.10 = Above market
-                </p>
               </div>
             </div>
           </div>

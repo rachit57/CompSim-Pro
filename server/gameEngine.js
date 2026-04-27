@@ -28,7 +28,19 @@ function calculateGrapevinePenalty(emp, workforce) {
   return Math.min(penalty, 0.4); // Max 40% added risk from peer envy
 }
 
-function processRound(decisions, workforce, round) {
+function processRound(decisions, rawWorkforce, round) {
+  // Deep clone to force React to recognize state changes on the client
+  let workforce = JSON.parse(JSON.stringify(rawWorkforce));
+  const { workforce: masterWorkforce } = require('./indiaWorkforce');
+
+  // Backfill connections if the session is old/cached
+  workforce.forEach(emp => {
+    if (!emp.connections) {
+      const masterEmp = masterWorkforce.find(w => w.id === emp.id);
+      emp.connections = masterEmp ? (masterEmp.connections || []) : [];
+    }
+  });
+
   let totalBudgetUsed = 0;
   let totalPerformanceValue = 0;
   let totalEquityDistance = 0;
@@ -37,7 +49,6 @@ function processRound(decisions, workforce, round) {
   let budgetDelta = 0;
 
   // --- ROUND 1: Job Slotting & Equity ---
-  // decisions: { equityAllocations: { 'N5': 150000 } }
   if (round === 1) {
     if (decisions.equityAllocations) {
       Object.entries(decisions.equityAllocations).forEach(([id, amt]) => {
@@ -51,11 +62,9 @@ function processRound(decisions, workforce, round) {
   }
 
   // --- ROUND 2: Geo-Tiering & Benchmarking ---
-  // decisions: { targetPercentile: 50, tier2Mult: 0.8, tier3Mult: 0.6 }
   if (round === 2) {
     const percentileMod = decisions.targetPercentile === 75 ? 1.15 : (decisions.targetPercentile === 90 ? 1.3 : 1.0);
     workforce.forEach(emp => {
-      let originalMid = emp.marketMid;
       // Adjust baseline market median
       if (emp.tier === 2) emp.marketMid = Math.round(emp.marketMid * (decisions.tier2Mult || 0.8) * percentileMod);
       else if (emp.tier >= 3) emp.marketMid = Math.round(emp.marketMid * (decisions.tier3Mult || 0.6) * percentileMod);
@@ -64,24 +73,20 @@ function processRound(decisions, workforce, round) {
   }
 
   // --- ROUND 3: Advanced Formula Making ---
-  // decisions: { wEbitda: 40, wDiv: 40, wInd: 20, curve: { 1: 0, 2: 0, 3: 1, 4: 1.5, 5: 2 } }
   if (round === 3) {
-    const totalWeight = (decisions.wEbitda || 0) + (decisions.wDiv || 0) + (decisions.wInd || 0);
+    const totalWeight = (decisions.wEbitda || 0) + (decisions.wDiv || 0) + (decisions.wInd || 0) + (decisions.wTeam || 0) + (decisions.wCsat || 0) + (decisions.wLongTerm || 0);
     const valid = totalWeight === 100;
     
     workforce.forEach(emp => {
-      // If the weights are invalid (don't equal 100), default to a flat unoptimized curve
       let payout = 1.0;
       if (valid && decisions.curve) {
         payout = decisions.curve[emp.performance.toString()] || 1.0;
-        // In a real scenario, we'd blend the EBITDA/Div achievement, but for now we just apply the custom curve
       }
       emp.projectedBonusMultiplier = payout;
     });
   }
 
   // --- ROUND 4: LTI Vesting ---
-  // decisions: { ltiGrants: { 'E1': 0.1 }, vestingCliff: 4 }
   if (round === 4) {
     if (decisions.ltiGrants) {
       Object.entries(decisions.ltiGrants).forEach(([id, amt]) => {
@@ -91,52 +96,61 @@ function processRound(decisions, workforce, round) {
     }
   }
 
-  // --- ROUND 5: Sales/Exec Alignment ---
-  // decisions: { salesAcc: 1.5, execPsuMix: 0.5 }
+  // --- ROUND 5: Variable Payout Execution ---
   if (round === 5) {
     workforce.forEach(emp => {
-      if (emp.type === 'sales') emp.accelerator = decisions.salesAcc || 1.0;
-      if (emp.type === 'executive') emp.sto = decisions.execPsuMix || 0.2;
+      if (emp.projectedBonusMultiplier) {
+        // Apply variable bonus to current pay for this quarter
+        const bonusTarget = emp.currentPay * 0.15; // Assume 15% target
+        emp.currentPay += (bonusTarget * emp.projectedBonusMultiplier);
+      }
     });
   }
 
-  // --- ROUND 6: Exception Triage ---
-  // decisions: { exceptions: { 'N5': 1500000, ... } }
+  // --- ROUND 6: Exception Triage & Hard Budget ---
   if (round === 6) {
-    let exceptionsTotal = 0;
+    let exceptionsCost = 0;
     if (decisions.exceptions) {
       Object.entries(decisions.exceptions).forEach(([id, amt]) => {
+        const amount = Number(amt) || 0;
+        exceptionsCost += amount;
         const emp = workforce.find(w => w.id === id);
-        if (emp && amt > 0) {
-          emp.currentPay += amt;
-          budgetDelta += amt;
-          exceptionsTotal += amt;
+        if (emp) {
+          emp.currentPay += amount;
         }
       });
     }
-    
-    // Hard failure condition if they overspend the discretionary budget
-    if (exceptionsTotal > 2000000) {
+
+    // STRICT BUDGET ENFORCEMENT: Max ₹20L allowed
+    if (exceptionsCost > 2000000) {
+      // PENALTY: Wipe out executive LTI due to board governance failure
       workforce.forEach(emp => {
-        emp.lti = 0; // Board wipes equity pool as punishment
+        if (emp.tier === 1 && emp.lti > 0) {
+          emp.lti = 0; // Seized by board
+        }
       });
     }
   }
 
-  // Calculate Departmental Averages
+  // Calculate Metrics based on mutated state
   const deptStats = {};
-  workforce.forEach(e => {
-    if (!deptStats[e.dept]) deptStats[e.dept] = { totalCR: 0, count: 0 };
-    deptStats[e.dept].totalCR += calculateCompRatio(e.currentPay, e.marketMid);
-    deptStats[e.dept].count++;
+  workforce.forEach(emp => {
+    if (!deptStats[emp.dept]) deptStats[emp.dept] = { totalCR: 0, count: 0 };
+    const cr = calculateCompRatio(emp.currentPay, emp.marketMid);
+    deptStats[emp.dept].totalCR += cr;
+    deptStats[emp.dept].count += 1;
   });
 
-  // Calculate Final Outcomes & Risks
+  const cityRiskMultipliers = {
+    1: 1.2, // Tier 1 flight risk higher
+    2: 1.0,
+    3: 0.8
+  };
+
   let employeeOutcomes = [];
-  const cityRiskMultipliers = { 1: 1.5, 2: 1.2, 3: 1.0, 4: 0.8 };
 
   workforce.forEach(emp => {
-    let cr = calculateCompRatio(emp.currentPay, emp.marketMid);
+    const cr = calculateCompRatio(emp.currentPay, emp.marketMid);
     let avgDeptCR = deptStats[emp.dept].totalCR / deptStats[emp.dept].count;
     
     totalBudgetUsed += emp.currentPay;
@@ -178,7 +192,7 @@ function processRound(decisions, workforce, round) {
   const pValue = Math.max(0.01, 0.08 - totalEquityDistance * 0.01 + crVariance);
   
   const metrics = {
-    budgetUtil: parseFloat((totalBudgetUsed / 100000000).toFixed(2)),
+    budgetUtil: parseFloat((totalBudgetUsed / 10000000).toFixed(2)),
     turnover: parseFloat(avgTurnover.toFixed(3)),
     engagement: parseFloat((1 - avgTurnover).toFixed(2)),
     pValue: parseFloat(pValue.toFixed(3)),
