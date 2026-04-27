@@ -5,16 +5,23 @@ const Redis = require('ioredis');
 const cors = require('cors');
 require('dotenv').config();
 
-const redis = new Redis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times) => Math.min(times * 50, 2000)
-});
+const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL;
+let redis = null;
 
-redis.on('error', (err) => {
-  console.error('!!! Redis Error:', err.message);
-});
-redis.on('connect', () => console.log('>>> Connected to Redis'));
-redis.on('ready', () => console.log('>>> Redis Client Ready'));
+if (redisUrl) {
+  redis = new Redis(redisUrl, {
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => Math.min(times * 50, 2000)
+  });
+
+  redis.on('error', (err) => {
+    console.error('!!! Redis Error:', err.message);
+  });
+  redis.on('connect', () => console.log('>>> Connected to Redis'));
+  redis.on('ready', () => console.log('>>> Redis Client Ready'));
+} else {
+  console.log('>>> No REDIS_URL provided, running purely in-memory.');
+}
 
 const { calculateHES, processRound, calculateParityPValue } = require('./gameEngine');
 const { getThemeConfig } = require('./industryThemes');
@@ -41,7 +48,7 @@ const socketToSession = {};
 
 const getSession = async (code) => {
   try {
-    if (redis.status === 'ready') {
+    if (redis && redis.status === 'ready') {
       const data = await redis.get(`session:${code}`);
       if (data) return JSON.parse(data);
     }
@@ -54,11 +61,11 @@ const getSession = async (code) => {
 const saveSession = async (code, session) => {
   sessions[code] = session; // Always update memory
   try {
-    if (redis.status === 'ready') {
+    if (redis && redis.status === 'ready') {
       await redis.set(`session:${code}`, JSON.stringify(session), 'EX', 86400);
     }
   } catch (err) {
-    console.warn(`>>> Redis Save Failed for ${code}`);
+    console.error('!!! Redis Save Error:', err.message);
   }
 };
 
