@@ -89,7 +89,8 @@ io.on('connection', (socket) => {
         name: playerName,
         role: role, 
         score: null,
-        decisions: []
+        decisions: [],
+        workforce: JSON.parse(JSON.stringify(workforce)) // Deep clone individual workforce
       };
 
       await saveSession(sessionCode, session);
@@ -115,10 +116,23 @@ io.on('connection', (socket) => {
 
   socket.on('submit_decision', async ({ sessionCode, decisions }) => {
     let session = await getSession(sessionCode);
-    if (!session) return;
+    if (!session || !session.players[socket.id]) return;
 
-    // Process logic here or save for round advance
-    session.players[socket.id].decisions.push(decisions);
+    const player = session.players[socket.id];
+    player.decisions.push(decisions);
+    
+    // Process the round mathematically
+    const { hes, metrics, updatedWorkforce } = processRound(
+      decisions, 
+      player.workforce, 
+      decisions.round || session.round
+    );
+
+    // Apply the mutated workforce back to the player
+    player.workforce = updatedWorkforce;
+    player.score = hes;
+    player.metrics = metrics;
+
     await saveSession(sessionCode, session);
     io.to(sessionCode).emit('session_update', session);
   });

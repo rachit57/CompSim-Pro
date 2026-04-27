@@ -25,6 +25,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { useTheme } from '@/lib/useTheme';
+import { RoundMechanics } from '@/components/RoundMechanics';
 
 // ── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -37,20 +38,12 @@ type Phase =
   | { type: 'end' };
 
 interface Decisions {
-  meritPool: number;
-  salesAcc: number;
-  ltiMix: number;
-  parityPool: number;
+  [key: string]: any;
 }
 
 // ── HELPERS ─────────────────────────────────────────────────────────────────
 
-const DEFAULT_DECISIONS: Decisions = {
-  meritPool: 0.08,
-  salesAcc: 1.0,
-  ltiMix: 0.2,
-  parityPool: 0,
-};
+const DEFAULT_DECISIONS: Decisions = {};
 
 const fmtLPA  = (n: number) => `₹${(n / 100000).toFixed(1)}L`;
 const fmtPct  = (n: number) => `${Math.round(n * 100)}%`;
@@ -442,9 +435,33 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* ── WORKFORCE ─────────────────────────────────────────────────── */}
+        {/* ── WORKFORCE & GRAPEVINE ─────────────────────────────────────── */}
         {tab === 'workforce' && (
-          <div className="animate-in">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-in">
+            <div className="lg:col-span-1 space-y-6">
+              {/* Org Chart / Grapevine */}
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[13px] font-semibold text-[var(--text)] mb-3">Grapevine Network</h3>
+                <p className="text-[10px] text-[var(--text-muted)] leading-relaxed mb-4">
+                  Visual mapping of reporting lines and peer connections. Parity imbalances between connected nodes penalize retention.
+                </p>
+                <div className="space-y-3">
+                  {workforce.filter((e: any) => e.connections && e.connections.length > 0).slice(0, 8).map((emp: any) => (
+                    <div key={emp.id} className="text-[11px]">
+                      <div className="font-medium text-[var(--text)] flex items-center justify-between">
+                        {emp.name} <span className="text-[9px] text-[var(--text-muted)] px-1.5 py-0.5 bg-[var(--surface-alt)] rounded border border-[var(--border)]">{emp.id}</span>
+                      </div>
+                      <div className="text-[var(--text-muted)] ml-2 border-l border-[var(--border)] pl-2 mt-1 py-0.5">
+                        <span className="text-[9px] uppercase tracking-wider">Talks to:</span>{' '}
+                        {emp.connections.join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden flex flex-col">
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b border-[var(--border)] flex items-start justify-between gap-4">
                 <div>
@@ -511,7 +528,7 @@ export default function GamePage() {
                           </td>
                           <td className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <div className="w-10 h-1 bg-slate-800 rounded-full overflow-hidden">
+                              <div className="w-10 h-1 bg-[var(--border)] rounded-full overflow-hidden">
                                 <div
                                   className={`h-full rounded-full ${
                                     isRisk ? 'bg-red-500' : cr > 1.1 ? 'bg-amber-500' : 'bg-emerald-600'
@@ -528,8 +545,8 @@ export default function GamePage() {
                           </td>
                           <td className="px-4 py-3.5 text-center">
                             {isRisk
-                              ? <span className="text-[9px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">Risk</span>
-                              : <span className="text-[9px] font-medium text-[var(--text-muted)] bg-slate-800/60 px-2 py-0.5 rounded-full">Stable</span>
+                              ? <span className="text-[9px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">Risk</span>
+                              : <span className="text-[9px] font-medium text-[var(--text-muted)] bg-[var(--surface-alt)] px-2 py-0.5 rounded-full border border-[var(--border)]">Stable</span>
                             }
                           </td>
                           <td className="px-6 py-3.5">
@@ -577,6 +594,7 @@ export default function GamePage() {
                 </p>
               </div>
             </div>
+          </div>
           </div>
         )}
 
@@ -685,81 +703,12 @@ export default function GamePage() {
             <div className="space-y-5">
               <h2 className="text-[13px] font-semibold text-[var(--text)]">Decision Levers</h2>
 
-              {/* Merit Pool */}
-              <LeverCard
-                id="lever-merit"
-                label="Merit Pool"
-                description="Percentage salary increase applied across all employees, weighted by performance rating"
-                displayValue={fmtPct(decisions.meritPool)}
-              >
-                <input
-                  id="slider-merit"
-                  type="range" min={0} max={0.3} step={0.01}
-                  value={decisions.meritPool}
-                  onChange={(e) => setDecisions((d) => ({ ...d, meritPool: +e.target.value }))}
-                  style={{ background: sliderBg(decisions.meritPool / 0.3) }}
-                />
-                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
-                  <span>0%</span><span>30%</span>
-                </div>
-              </LeverCard>
-
-              {/* Sales Accelerator */}
-              <LeverCard
-                id="lever-sales"
-                label="Sales Accelerator"
-                description="Commission rate multiplier that activates above 100% of quarterly sales target"
-                displayValue={`${decisions.salesAcc.toFixed(1)}×`}
-              >
-                <input
-                  id="slider-sales"
-                  type="range" min={1.0} max={3.0} step={0.1}
-                  value={decisions.salesAcc}
-                  onChange={(e) => setDecisions((d) => ({ ...d, salesAcc: +e.target.value }))}
-                  style={{ background: sliderBg((decisions.salesAcc - 1) / 2) }}
-                />
-                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
-                  <span>1.0× (Linear)</span><span>3.0×</span>
-                </div>
-              </LeverCard>
-
-              {/* Executive LTI Mix */}
-              <LeverCard
-                id="lever-lti"
-                label="Executive LTI Mix"
-                description="Proportion of executive variable pay allocated as long-term equity rather than immediate cash"
-                displayValue={fmtPct(decisions.ltiMix)}
-              >
-                <input
-                  id="slider-lti"
-                  type="range" min={0} max={0.6} step={0.05}
-                  value={decisions.ltiMix}
-                  onChange={(e) => setDecisions((d) => ({ ...d, ltiMix: +e.target.value }))}
-                  style={{ background: sliderBg(decisions.ltiMix / 0.6) }}
-                />
-                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
-                  <span>0% (Full cash)</span><span>60%</span>
-                </div>
-              </LeverCard>
-
-              {/* Equity Adjustment Pool */}
-              <LeverCard
-                id="lever-equity"
-                label="Equity Adjustment Pool"
-                description="Discretionary budget directed at specific pay anomalies in the workforce"
-                displayValue={fmtLPA(decisions.parityPool)}
-              >
-                <input
-                  id="slider-equity"
-                  type="range" min={0} max={1000000} step={50000}
-                  value={decisions.parityPool}
-                  onChange={(e) => setDecisions((d) => ({ ...d, parityPool: +e.target.value }))}
-                  style={{ background: sliderBg(decisions.parityPool / 1000000) }}
-                />
-                <div className="flex justify-between text-[9px] font-mono text-[var(--text-muted)] mt-1">
-                  <span>₹0</span><span>₹10L</span>
-                </div>
-              </LeverCard>
+              <RoundMechanics 
+                round={round} 
+                decisions={decisions} 
+                setDecisions={setDecisions} 
+                workforce={workforce} 
+              />
             </div>
 
             {/* Submission summary */}
