@@ -174,6 +174,16 @@ export default function GamePage() {
     
     if (!quote) {
       const cr = emp.currentPay / emp.marketMid;
+      const distractors = [
+        `I heard the ${emp.dept} team in Bengaluru is getting a special retention bonus. Is that true?`,
+        `Just keeping my head down. Though the new cafeteria vendor is terrible.`,
+        `Recruiters from the fintech sector have been messaging me on LinkedIn a lot lately.`,
+        `I'm focused on my OKRs, but the lack of clarity on the upcoming IPO timeline is distracting.`,
+        `Did you see the latest Glassdoor review? It mentioned significant pay disparities in our division.`,
+        `Honestly, I'm just trying to hit my targets. But morale feels a bit shaky in the broader team.`
+      ];
+      const randomDistractor = distractors[(emp.id.charCodeAt(0) + emp.id.charCodeAt(1) + round) % distractors.length];
+
       if (cr < 0.85 && emp.performance >= 4) {
         quote = `I'm delivering top ratings, but my pay is severely below market (${(cr*100).toFixed(0)}% of median). I need a structural adjustment, not just a standard merit hike.`;
       } else if (cr < 0.85) {
@@ -181,7 +191,7 @@ export default function GamePage() {
       } else if (cr > 1.15) {
         quote = `I'm very happy with my compensation right now. Just focused on hitting my targets and helping the team.`;
       } else {
-        quote = `Things are stable. I'm focusing on hitting my targets this quarter. No major concerns right now.`;
+        quote = randomDistractor;
       }
     }
 
@@ -285,7 +295,7 @@ export default function GamePage() {
           <div className="ml-8 flex items-center gap-6">
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium">HES Score</span>
-              <span className={`text-[12px] font-mono font-bold ${myPlayer?.score >= 65 ? 'text-emerald-500' : 'text-amber-500'}`}>{myPlayer?.score ?? '-'}</span>
+              <span className={`text-[12px] font-mono font-bold ${Number(myPlayer?.score || 75) >= 65 ? 'text-emerald-500' : 'text-amber-500'}`}>{myPlayer?.score ?? '75.00'}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-medium">Budget Utilized</span>
