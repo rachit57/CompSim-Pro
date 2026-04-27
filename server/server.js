@@ -85,13 +85,23 @@ io.on('connection', (socket) => {
         };
       }
       
-      session.players[socket.id] = {
-        name: playerName,
-        role: role, 
-        score: null,
-        decisions: [],
-        workforce: JSON.parse(JSON.stringify(workforce)) // Deep clone individual workforce
-      };
+      // Recover existing player state if they reconnect
+      const existingPlayerId = Object.keys(session.players).find(id => session.players[id].name === playerName);
+      
+      if (existingPlayerId) {
+        session.players[socket.id] = session.players[existingPlayerId];
+        if (existingPlayerId !== socket.id) {
+          delete session.players[existingPlayerId];
+        }
+      } else {
+        session.players[socket.id] = {
+          name: playerName,
+          role: role, 
+          score: null,
+          decisions: [],
+          workforce: JSON.parse(JSON.stringify(workforce)) // Deep clone individual workforce
+        };
+      }
 
       await saveSession(sessionCode, session);
       console.log(`>>> Session Saved & Updating: ${sessionCode}`);
