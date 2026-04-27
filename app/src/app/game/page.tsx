@@ -5,100 +5,75 @@ import { useRouter } from 'next/navigation';
 import { socket } from '@/lib/socketClient';
 import { useGameStore } from '@/lib/store';
 import {
+  ONBOARDING_CONTENT,
   ROUND_STORIES,
-  NARRATIVE_DOSSIER,
   EMPLOYEE_PULSE,
+  NARRATIVE_DOSSIER,
   CASE_STUDY_BRIEFING,
+  type OnboardingSlide,
+  type RoundStory,
 } from '@/lib/narrative';
 import {
-  Activity, Users, DollarSign, TrendingUp, AlertTriangle,
-  ChevronRight, Zap, Target, BarChart3, MessageSquare,
-  FileText, ArrowUpRight, ArrowDownRight, CheckCircle2,
-  Clock, Shield, Info, TrendingDown, Star, AlertCircle
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  BarChart2,
+  Users,
+  TrendingUp,
+  Sliders,
 } from 'lucide-react';
 
-// ─────────────────────────────────────────────────────────────
-//  LEVER CONFIG (Rich descriptions for Strategic Console)
-// ─────────────────────────────────────────────────────────────
-const LEVER_CONFIG = {
-  meritPool: {
-    label: 'Overall Merit Pool',
-    unit: '%',
-    display: (v: number) => `+${Math.round(v * 100)}%`,
-    color: 'indigo',
-    accentClass: 'accent-indigo-500',
-    trackColor: '#6366f1',
-    whatItDoes: 'Applies a performance-weighted salary increase across all employees. Higher performers receive a proportionally larger share via merit matrix linkage.',
-    tooHigh: 'Exceeds quarterly budget ceiling — CFO triggers mandatory spending review and flags IPO cost trajectory as unsustainable.',
-    tooLow: 'Below-market increases accelerate Green Circle attrition among high performers, particularly in Tier-1 Tech roles.',
-    sweetSpot: '8–12% in stable rounds; 14%+ only during a declared retention crisis (Round 4).',
-  },
-  salesAcc: {
-    label: 'Sales Accelerator Multiplier',
-    unit: 'x',
-    display: (v: number) => `${v.toFixed(1)}x`,
-    color: 'emerald',
-    accentClass: 'accent-emerald-500',
-    trackColor: '#10b981',
-    whatItDoes: 'Multiplies commission rates for performance above 100% target. A 2x accelerator means a rep closing 130% earns double the unit rate on the incremental 30%.',
-    tooHigh: 'Commission liability spikes. If three or more reps hit 140%+ target in the same quarter, payout exceeds budget by ₹15–20L.',
-    tooLow: 'Below 1.5x has no behavioral effect — high-performers already model this. Quota plateau continues unresolved.',
-    sweetSpot: '1.5x–2.5x creates meaningful differentiation. Above 2.5x only in Round 2 to break the plateau as a one-time signal.',
-  },
-  ltiMix: {
-    label: 'Executive LTI Mix',
-    unit: '%',
-    display: (v: number) => `${Math.round(v * 100)}%`,
-    color: 'amber',
-    accentClass: 'accent-amber-500',
-    trackColor: '#f59e0b',
-    whatItDoes: 'Shifts executive variable pay from Short-Term Incentive (quarterly cash bonuses) toward Long-Term Incentives (ESOPs/RSUs vesting over 3–4 years). Directly counteracts the Agency Problem.',
-    tooHigh: 'Executives feel cash-strapped in the current period. Risk of leadership attrition if LTI exceeds 55% without sufficient base pay foundation.',
-    tooLow: 'Below 30% LTI, the Agency Problem persists. Executives continue optimizing quarterly EBITDA over 3-year IPO milestones.',
-    sweetSpot: '30–45% in standard rounds. 45–50%+ in Rounds 5–6 to pass IPO governance screen.',
-  },
-  parityPool: {
-    label: 'Equity Adjustment Pool',
-    unit: '₹',
-    display: (v: number) => `₹${(v / 100000).toFixed(1)}L`,
-    color: 'violet',
-    accentClass: 'accent-indigo-500',
-    trackColor: '#8b5cf6',
-    whatItDoes: 'A discretionary, targeted budget to correct specific pay fault lines identified in the parity audit — particularly across departments and city tiers. Not a blanket raise.',
-    tooHigh: 'Absorbs budget headroom needed for crisis rounds. Board views large pool allocations without specific justification as fiscal imprecision.',
-    tooLow: 'Insufficient to close statistical fault lines. p-value stays below 0.05, triggering compliance risk in DRHP filing.',
-    sweetSpot: '₹3–5L in standard rounds. ₹5–8L in Round 3 (equity crisis) and Round 4 (Tier-3 international poaching).',
-  },
+// ── TYPES ───────────────────────────────────────────────────────────────────
+
+type GameTab = 'situation' | 'workforce' | 'market' | 'decisions';
+
+type Phase =
+  | { type: 'onboarding'; slide: number }
+  | { type: 'round-brief' }
+  | { type: 'playing'; tab: GameTab }
+  | { type: 'end' };
+
+interface Decisions {
+  meritPool: number;
+  salesAcc: number;
+  ltiMix: number;
+  parityPool: number;
+}
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+
+const DEFAULT_DECISIONS: Decisions = {
+  meritPool: 0.08,
+  salesAcc: 1.0,
+  ltiMix: 0.2,
+  parityPool: 0,
 };
 
-export default function GameDashboard() {
+const fmtLPA  = (n: number) => `₹${(n / 100000).toFixed(1)}L`;
+const fmtPct  = (n: number) => `${Math.round(n * 100)}%`;
+const fmtCR   = (pay: number, mid: number) => (pay / mid).toFixed(2);
+
+const sliderBg = (frac: number) =>
+  `linear-gradient(to right, #4f46e5 ${frac * 100}%, rgba(255,255,255,0.07) ${frac * 100}%)`;
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MAIN PAGE
+// ════════════════════════════════════════════════════════════════════════════
+
+export default function GamePage() {
   const router = useRouter();
-  const { sessionCode, role, playerName, sessionData, updateSessionData, hydrated } = useGameStore();
+  const { sessionCode, role, playerName, sessionData, updateSessionData, hydrated } =
+    useGameStore();
 
-  const [decisions, setDecisions] = useState({
-    meritPool: 0.08,
-    salesAcc: 1.0,
-    ltiMix: 0.2,
-    parityPool: 0,
-  });
+  const [phase,       setPhase]       = useState<Phase>({ type: 'onboarding', slide: 0 });
+  const [decisions,   setDecisions]   = useState<Decisions>(DEFAULT_DECISIONS);
+  const [promoted,    setPromoted]    = useState<string[]>([]);
+  const [interviewed, setInterviewed] = useState<string[]>([]);
+  const [submitted,   setSubmitted]   = useState(false);
+  const [pulse, setPulse] = useState<{ name: string; role: string; quote: string } | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'briefing' | 'workforce' | 'market' | 'execution'>('briefing');
-  const [promotedEmployees, setPromotedEmployees] = useState<string[]>([]);
-  const [interviewedIds, setInterviewedIds] = useState<string[]>([]);
-  const [showBriefing, setShowBriefing] = useState(true);
-  const [selectedPulse, setSelectedPulse] = useState<{ name: string; role: string; quote: string } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [activeLeverInfo, setActiveLeverInfo] = useState<keyof typeof LEVER_CONFIG | null>(null);
-
-  useEffect(() => {
-    if (sessionData?.round) {
-      setShowBriefing(true);
-      setInterviewedIds([]);
-      setPromotedEmployees([]);
-      setSubmitted(false);
-    }
-  }, [sessionData?.round]);
+  // ── SOCKET SETUP ──────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!hydrated) return;
@@ -107,685 +82,568 @@ export default function GameDashboard() {
     socket.connect();
     socket.emit('join_session', { sessionCode, role, playerName });
 
-    socket.on('connect_error', (err) => {
-      setErrorMessage(`Network Error: ${err.message}. Check your server URL settings.`);
+    socket.on('connect_error', (err) =>
+      setErrMsg(`Connection error: ${err.message}`),
+    );
+
+    socket.on('session_update', (data) => {
+      setErrMsg(null);
+      updateSessionData(data);
     });
-    socket.on('session_update', (data) => { setErrorMessage(null); updateSessionData(data); });
-    socket.on('round_advanced', (data) => { updateSessionData(data); });
+
+    // Professor advances: only interrupt if already playing
+    socket.on('round_advanced', (data) => {
+      updateSessionData(data);
+      setPhase((prev) =>
+        prev.type === 'playing' ? { type: 'round-brief' } : prev,
+      );
+      setDecisions(DEFAULT_DECISIONS);
+      setPromoted([]);
+      setInterviewed([]);
+      setSubmitted(false);
+    });
+
     socket.on('sudden_challenge', (shock) => {
-      alert(`⚠️ MARKET SHOCK: ${shock.title}\n\n${shock.description}`);
+      alert(`Market Shock: ${shock.title}\n\n${shock.description}`);
     });
 
     return () => {
+      socket.off('connect_error');
       socket.off('session_update');
       socket.off('round_advanced');
       socket.off('sudden_challenge');
     };
-  }, [sessionCode, router, updateSessionData, role, playerName, hydrated]);
+  }, [hydrated, sessionCode, role, playerName, router, updateSessionData]);
 
-  const myId = socket.id as string;
-  const myPlayer = sessionData?.players?.[myId];
-  const currentMetrics = myPlayer?.metrics || {
-    budgetUtil: 0.90, turnover: 0.05, engagement: 0.75, pValue: 0.08, roi: 0.65,
-  };
+  // ── LOADING ───────────────────────────────────────────────────────────────
 
-  const round = sessionData?.round ?? 1;
-  const roundStory = ROUND_STORIES[round as keyof typeof ROUND_STORIES];
-
-  if (!sessionData) return (
-    <div className="min-h-screen bg-[#020817] flex items-center justify-center bg-grid">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-          <Activity className="w-7 h-7 text-indigo-500 animate-spin" />
+  if (!hydrated || !sessionData) {
+    return (
+      <div className="min-h-screen bg-[#050a18] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-xs text-slate-600">Connecting to session…</p>
         </div>
-        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">Synchronizing with War Room...</p>
-        <p className="text-slate-700 text-[10px] mt-2">{sessionCode}</p>
       </div>
-    </div>
-  );
+    );
+  }
+
+  const round: number   = sessionData.round ?? 1;
+  const myId            = socket.id as string;
+  const myPlayer        = sessionData.players?.[myId];
+  const metrics         = myPlayer?.metrics ?? {
+    budgetUtil: 0, turnover: 0.08, engagement: 0.75, pValue: 0.082, roi: 0,
+  };
+  const workforce: any[] = sessionData.workforce ?? [];
+
+  // ── SUBMIT ────────────────────────────────────────────────────────────────
 
   const handleSubmit = () => {
     socket.emit('submit_decision', {
       sessionCode,
-      decisions: { ...decisions, promotions: promotedEmployees },
+      decisions: { ...decisions, promotions: promoted, round },
     });
     setSubmitted(true);
+    if (round >= 6) {
+      setTimeout(() => setPhase({ type: 'end' }), 1400);
+    }
   };
 
-  const togglePromotion = (id: string) => {
-    setPromotedEmployees(prev => {
-      if (prev.includes(id)) return prev.filter(p => p !== id);
-      if (prev.length >= 2) { alert('Board Alert: Promotion headcount quota reached this round (Max: 2).'); return prev; }
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+
+  const togglePromote = (id: string) =>
+    setPromoted((prev) => {
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      if (prev.length >= 2)  return prev;
       return [...prev, id];
     });
-  };
 
   const handleInterview = (emp: any) => {
-    if (interviewedIds.includes(emp.id)) {
-      const quote = EMPLOYEE_PULSE[round as keyof typeof EMPLOYEE_PULSE]?.[emp.id] || 'No further confidential information available at this clearance level.';
-      setSelectedPulse({ name: emp.name, role: emp.role, quote });
-      return;
+    const alreadyDone = interviewed.includes(emp.id);
+    const quote =
+      EMPLOYEE_PULSE[round]?.[emp.id] ??
+      'No additional disclosure this quarter.';
+    if (!alreadyDone) {
+      if (interviewed.length >= 4) return;
+      setInterviewed((prev) => [...prev, emp.id]);
     }
-    if (interviewedIds.length >= 4) {
-      alert('Executive Bandwidth Alert: Maximum 4 confidential interviews per round.');
-      return;
-    }
-    setInterviewedIds(prev => [...prev, emp.id]);
-    const quote = EMPLOYEE_PULSE[round as keyof typeof EMPLOYEE_PULSE]?.[emp.id] || 'This employee has no confidential feedback to surface this round.';
-    setSelectedPulse({ name: emp.name, role: emp.role, quote });
+    // Look up name/role from workforce data
+    setPulse({ name: emp.name, role: emp.role, quote });
   };
 
-  // ──────────────────────────────────────────────────────────
-  //  ROUND BRIEFING MODAL
-  // ──────────────────────────────────────────────────────────
-  const RoundBriefingModal = () => {
-    if (!roundStory) return null;
-    const isFirstRound = round === 1;
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE: ONBOARDING
+  // ════════════════════════════════════════════════════════════════════════
+
+  if (phase.type === 'onboarding') {
+    const { slide: idx } = phase;
+    const total = ONBOARDING_CONTENT.length + 1; // +1 = round brief
+
+    const goNext = () =>
+      idx < ONBOARDING_CONTENT.length - 1
+        ? setPhase({ type: 'onboarding', slide: idx + 1 })
+        : setPhase({ type: 'round-brief' });
+
+    const goBack =
+      idx > 0 ? () => setPhase({ type: 'onboarding', slide: idx - 1 }) : undefined;
+
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md overflow-y-auto">
-        <div className="w-full max-w-4xl bg-[#0f1629] border border-indigo-500/20 rounded-3xl shadow-2xl shadow-indigo-500/10 overflow-hidden my-8">
-
-          {/* Modal Header */}
-          <div className="bg-gradient-to-r from-indigo-900/40 to-slate-900/0 border-b border-white/5 px-8 py-6 flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-mono text-indigo-500 uppercase tracking-[0.25em]">{roundStory.act}</span>
-                <span className="text-slate-700">·</span>
-                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.15em]">Round {round} of 6</span>
-              </div>
-              <h2 className="font-display text-3xl font-black italic text-white">
-                {roundStory.title}
-              </h2>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="text-[9px] font-mono text-slate-600 uppercase">Human Equity Score</div>
-              <div className="text-2xl font-black text-indigo-400">{myPlayer?.score || '—'}</div>
-            </div>
-          </div>
-
-          <div className="p-8 space-y-6">
-
-            {/* Situation Narrative */}
-            <div className="bg-slate-950/60 border-l-4 border-indigo-500 rounded-r-2xl p-6">
-              <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-3">Situation Briefing</div>
-              <p className="prose-narrative text-sm leading-relaxed whitespace-pre-line">
-                {roundStory.situation}
-              </p>
-            </div>
-
-            {/* Your Mandate */}
-            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="w-4 h-4 text-amber-500" />
-                <div className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">{roundStory.mandate.headline}</div>
-              </div>
-              <div className="space-y-2.5">
-                {roundStory.mandate.tasks.map((task, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-[9px] font-black text-amber-400">{i + 1}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">{task}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Watch For + Board Pressure + Scoring Lens */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Watch For */}
-              <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                  <div className="text-[9px] font-black text-rose-400 uppercase tracking-[0.2em]">Watch For</div>
-                </div>
-                <div className="space-y-2">
-                  {roundStory.watch_for.map((w, i) => (
-                    <p key={i} className="text-[11px] text-slate-400 leading-relaxed border-l border-slate-700 pl-2">
-                      {w}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              {/* Board Pressure */}
-              <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Shield className="w-3.5 h-3.5 text-slate-400" />
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Board Pressure</div>
-                </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">{roundStory.board_pressure}</p>
-              </div>
-
-              {/* Scoring Lens */}
-              <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-5">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Star className="w-3.5 h-3.5 text-indigo-400" />
-                  <div className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em]">Scoring Lens</div>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">{roundStory.scoring_lens}</p>
-              </div>
-            </div>
-
-            {/* CFO Alert (if present) */}
-            {roundStory.cfo_alert && (
-              <div className="bg-rose-500/5 border border-rose-500/25 rounded-2xl p-4 flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-[10px] font-black text-rose-400 uppercase tracking-wider mb-1">CFO Budget Alert</div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{roundStory.cfo_alert}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Previous Round Results (rounds 2+) */}
-            {round > 1 && myPlayer && (
-              <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-5">
-                <div className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Previous Round Results</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { label: 'HES Score', value: myPlayer.score, unit: '/100', good: myPlayer.score >= 70 },
-                    { label: 'Turnover Rate', value: `${(currentMetrics.turnover * 100).toFixed(1)}`, unit: '%', good: currentMetrics.turnover < 0.08 },
-                    { label: 'Engagement', value: `${Math.round(currentMetrics.engagement * 100)}`, unit: '%', good: currentMetrics.engagement > 0.7 },
-                    { label: 'Parity (p)', value: currentMetrics.pValue?.toFixed(3), unit: '', good: currentMetrics.pValue > 0.05 },
-                  ].map(m => (
-                    <div key={m.label} className="text-center">
-                      <div className={`text-2xl font-black ${m.good ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {m.value}<span className="text-sm">{m.unit}</span>
-                      </div>
-                      <div className="text-[9px] text-slate-600 font-mono uppercase tracking-wider mt-1">{m.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* CTA Button */}
-            <button
-              onClick={() => setShowBriefing(false)}
-              className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-indigo-500/15 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 text-sm group"
-            >
-              Accept Briefing & Enter Command Center
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <OnboardingScreen
+        slide={ONBOARDING_CONTENT[idx]}
+        slideIdx={idx}
+        total={total}
+        onNext={goNext}
+        onBack={goBack}
+        isLast={idx === ONBOARDING_CONTENT.length - 1}
+        playerName={playerName ?? ''}
+      />
     );
-  };
+  }
 
-  // ──────────────────────────────────────────────────────────
-  //  MAIN RENDER
-  // ──────────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE: ROUND BRIEF
+  // ════════════════════════════════════════════════════════════════════════
+
+  if (phase.type === 'round-brief') {
+    return (
+      <RoundBriefScreen
+        story={ROUND_STORIES[round]}
+        round={round}
+        playerName={playerName ?? ''}
+        prevScore={myPlayer?.score ?? null}
+        onEnter={() => setPhase({ type: 'playing', tab: 'situation' })}
+      />
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE: END
+  // ════════════════════════════════════════════════════════════════════════
+
+  if (phase.type === 'end') {
+    return (
+      <EndScreen
+        playerName={playerName ?? ''}
+        score={myPlayer?.score ?? 0}
+        metrics={metrics}
+      />
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE: PLAYING — GAME DASHBOARD
+  // ════════════════════════════════════════════════════════════════════════
+
+  const tab    = phase.tab;
+  const setTab = (t: GameTab) => setPhase({ type: 'playing', tab: t });
+
+  const TABS = [
+    { id: 'situation' as GameTab, label: 'Situation',   Icon: BarChart2   },
+    { id: 'workforce' as GameTab, label: 'Workforce',   Icon: Users       },
+    { id: 'market'    as GameTab, label: 'Market Data', Icon: TrendingUp  },
+    { id: 'decisions' as GameTab, label: 'Decisions',   Icon: Sliders     },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#020817] text-slate-100 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#050a18] text-slate-100 flex flex-col">
 
-      {/* Error Banner */}
-      {errorMessage && (
-        <div className="fixed top-0 left-0 right-0 z-[200] bg-rose-600 text-white p-2.5 text-center text-xs font-bold">
-          ⚠️ {errorMessage}
+      {/* Error banner */}
+      {errMsg && (
+        <div className="bg-red-950/80 text-red-300 text-xs px-4 py-2 text-center border-b border-red-900">
+          {errMsg}
         </div>
       )}
 
-      {/* Round Briefing Modal */}
-      {showBriefing && <RoundBriefingModal />}
-
-      {/* 1-on-1 Pulse Modal */}
-      {selectedPulse && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fade-up">
-          <div className="max-w-lg w-full bg-[#0f1629] border border-indigo-500/30 rounded-3xl p-8 shadow-2xl">
-            <div className="text-[10px] font-mono text-indigo-400 uppercase tracking-[0.25em] mb-1">Confidential 1-on-1 Interview</div>
-            <div className="text-xs font-mono text-slate-600 uppercase tracking-wider mb-5">{selectedPulse.role}</div>
-            <h2 className="font-display text-2xl font-black italic text-white mb-6">{selectedPulse.name}</h2>
-            <div className="bg-slate-950/80 border-l-3 border-r-0 border-indigo-500 p-6 rounded-r-2xl mb-6" style={{ borderLeftWidth: '3px' }}>
-              <p className="prose-narrative text-sm leading-relaxed italic text-indigo-100">
-                "{selectedPulse.quote}"
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedPulse(null)}
-              className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-black uppercase tracking-widest rounded-xl transition text-xs"
-            >
-              End 1-on-1 Session
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Lever Info Drawer */}
-      {activeLeverInfo && (
-        <div className="fixed inset-0 z-[105] flex items-end justify-center p-4 bg-slate-950/70 backdrop-blur-sm" onClick={() => setActiveLeverInfo(null)}>
-          <div className="w-full max-w-2xl bg-[#0f1629] border border-white/10 rounded-2xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Decision Lever</div>
-                <h3 className="text-lg font-black text-white">{LEVER_CONFIG[activeLeverInfo].label}</h3>
-              </div>
-              <button onClick={() => setActiveLeverInfo(null)} className="text-slate-600 hover:text-white text-xs font-mono">✕ Close</button>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-slate-950/60 rounded-xl p-4 border border-white/5">
-                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">What This Lever Does</div>
-                <p className="text-xs text-slate-300 leading-relaxed">{LEVER_CONFIG[activeLeverInfo].whatItDoes}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-4">
-                  <div className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-2">⬆ If Too High</div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">{LEVER_CONFIG[activeLeverInfo].tooHigh}</p>
-                </div>
-                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
-                  <div className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-2">⬇ If Too Low</div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">{LEVER_CONFIG[activeLeverInfo].tooLow}</p>
-                </div>
-              </div>
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
-                <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">◉ Recommended Range</div>
-                <p className="text-[11px] text-slate-400">{LEVER_CONFIG[activeLeverInfo].sweetSpot}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── TOP HEADER ─────────────────────────────────── */}
-      <header className="border-b border-white/5 px-6 py-3 flex items-center justify-between bg-[#020817]/90 sticky top-0 z-50 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="text-xs font-black text-white tracking-wider">CompSim Pro</div>
-          </div>
-          <div className="hidden md:flex items-center gap-1.5 bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${submitted ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-              {submitted ? 'Decision Submitted' : `Round ${round} · Awaiting Decision`}
-            </span>
-          </div>
-        </div>
+      {/* Top header */}
+      <header className="flex-none h-12 border-b border-white/[0.06] px-6 flex items-center justify-between bg-[#050a18]/95 sticky top-0 z-40 backdrop-blur-sm">
         <div className="flex items-center gap-3">
+          <span className="text-[13px] font-semibold text-white">BharatQuick</span>
+          <span className="text-slate-800">·</span>
+          <span className="text-[11px] text-slate-600">CompSim Pro</span>
+        </div>
+        <div className="flex items-center gap-5">
           <button
-            onClick={() => setShowBriefing(true)}
-            className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 hover:text-indigo-400 uppercase tracking-widest transition"
+            onClick={() => setPhase({ type: 'round-brief' })}
+            className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors"
           >
-            <FileText className="w-3.5 h-3.5" /> Round Brief
+            Round {round} Brief
           </button>
-          <div className="bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-right">
-            <div className="text-[8px] font-mono text-slate-600 uppercase">HES Score</div>
-            <div className="text-sm font-black text-indigo-400">{myPlayer?.score || '—'}</div>
+          <div className="text-right">
+            <div className="text-[9px] text-slate-700 uppercase tracking-wider">HES</div>
+            <div className="text-[13px] font-semibold font-mono text-indigo-400">
+              {myPlayer?.score ?? '—'}
+            </div>
           </div>
-          <div className="text-right hidden md:block">
-            <div className="text-[9px] text-slate-600 font-mono">{playerName}</div>
+          <div className="text-right hidden sm:block">
+            <div className="text-[11px] text-slate-400">{playerName}</div>
             <div className="text-[9px] text-slate-700 font-mono">{sessionCode}</div>
           </div>
         </div>
       </header>
 
-      {/* ── TAB NAVIGATION ─────────────────────────────── */}
-      <nav className="max-w-7xl mx-auto flex bg-[#0a1020] border-b border-white/5 px-6">
-        {([
-          { id: 'briefing', label: 'Strategic Dossier', icon: FileText },
-          { id: 'workforce', label: 'Workforce Hub', icon: Users },
-          { id: 'market', label: 'Market Intel', icon: BarChart3 },
-          { id: 'execution', label: 'Strategic Console', icon: Zap },
-        ] as const).map((tab) => (
+      {/* Status bar */}
+      <div className="border-b border-white/[0.04] bg-[#07101e] px-6 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              submitted ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+            }`}
+          />
+          <span className="text-[10px] text-slate-600">
+            {submitted
+              ? 'Decisions submitted — awaiting next round'
+              : `Round ${round} of 6 · Decisions pending`}
+          </span>
+        </div>
+        <div className="hidden sm:flex gap-5 text-[10px] font-mono text-slate-700">
+          <span>
+            Engagement:&nbsp;
+            <span className={metrics.engagement > 0.7 ? 'text-emerald-600' : 'text-red-500'}>
+              {fmtPct(metrics.engagement)}
+            </span>
+          </span>
+          <span>
+            Turnover:&nbsp;
+            <span className={metrics.turnover < 0.08 ? 'text-emerald-600' : 'text-red-500'}>
+              {fmtPct(metrics.turnover)}
+            </span>
+          </span>
+          <span>
+            Parity p:&nbsp;
+            <span className={metrics.pValue > 0.05 ? 'text-emerald-600' : 'text-red-500'}>
+              {metrics.pValue?.toFixed(3) ?? '—'}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <nav className="border-b border-white/[0.05] px-6 flex bg-[#060c1a]">
+        {TABS.map(({ id, label, Icon }) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-5 py-4 text-[11px] font-black uppercase tracking-[0.15em] border-b-2 transition-all ${
-              activeTab === tab.id
-                ? 'border-indigo-500 text-indigo-300'
+            key={id}
+            id={`tab-${id}`}
+            onClick={() => setTab(id)}
+            className={`flex items-center gap-1.5 px-4 py-3.5 text-[12px] font-medium border-b-2 transition-all ${
+              tab === id
+                ? 'border-indigo-500 text-slate-100'
                 : 'border-transparent text-slate-600 hover:text-slate-400'
             }`}
           >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
+            <Icon className="w-3.5 h-3.5" />
+            {label}
           </button>
         ))}
       </nav>
 
-      {/* ── MAIN CONTENT ───────────────────────────────── */}
-      <main className="max-w-7xl mx-auto p-6 lg:p-8 min-h-[600px]">
+      {/* Tab content */}
+      <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full">
 
-        {/* ────────────────────────────────────────────────
-            TAB 1: STRATEGIC DOSSIER
-        ──────────────────────────────────────────────── */}
-        {activeTab === 'briefing' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-up">
-            <div className="space-y-6 h-[720px] overflow-auto pr-2 scrollbar-hide">
+        {/* ── SITUATION ─────────────────────────────────────────────────── */}
+        {tab === 'situation' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
 
-              {/* Current Round Objective */}
-              <section className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6">
-                <div className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-1">Current Objective · Round {round}</div>
-                <h2 className="font-display text-xl font-black italic text-white mb-3">
-                  {roundStory?.title || 'Stabilize the Cohort'}
-                </h2>
-                <p className="text-xs text-slate-400 leading-relaxed">{CASE_STUDY_BRIEFING.strategic_roadmap[round as keyof typeof CASE_STUDY_BRIEFING.strategic_roadmap]}</p>
-              </section>
+            {/* Current round story */}
+            <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
+              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+                Current Situation · Round {round} of 6
+              </p>
+              <h2 className="font-display text-xl font-bold italic text-white mb-5">
+                {ROUND_STORIES[round]?.title}
+              </h2>
+              <div className="prose-sim space-y-4">
+                {ROUND_STORIES[round]?.paragraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+            </section>
 
+            <div className="space-y-6">
               {/* CEO Memo */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6 relative overflow-hidden">
-                <div className="absolute -bottom-6 -right-6 opacity-4"><MessageSquare className="w-24 h-24 text-slate-700" /></div>
-                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">Executive Communication</div>
-                <h3 className="text-base font-black text-white mb-1">{NARRATIVE_DOSSIER.ceo_memo.title}</h3>
-                <div className="text-[10px] font-mono text-slate-600 mb-4 uppercase tracking-wider">From: {NARRATIVE_DOSSIER.ceo_memo.author}</div>
-                <p className="prose-narrative text-sm leading-relaxed whitespace-pre-line">{NARRATIVE_DOSSIER.ceo_memo.content}</p>
-              </section>
-
-              {/* Glossary */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-5">Executive Glossary</div>
-                <div className="space-y-3">
-                  {CASE_STUDY_BRIEFING.glossary.map((item, idx) => (
-                    <div key={idx} className="border-l-2 border-slate-800 hover:border-indigo-500/40 pl-3 py-1 transition-colors">
-                      <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">{item.term}</div>
-                      <div className="text-[11px] text-slate-500 leading-relaxed">{item.definition}</div>
-                    </div>
+              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+                  Executive Communication
+                </p>
+                <h3 className="text-[13px] font-semibold text-white mb-1">
+                  {NARRATIVE_DOSSIER.ceo_memo.title}
+                </h3>
+                <p className="text-[10px] text-slate-700 font-mono mb-4">
+                  {NARRATIVE_DOSSIER.ceo_memo.author}
+                </p>
+                <div className="prose-sim space-y-3">
+                  {NARRATIVE_DOSSIER.ceo_memo.content.split('\n\n').map((p, i) => (
+                    <p key={i}>{p}</p>
                   ))}
                 </div>
-              </section>
-            </div>
-
-            <div className="space-y-6 h-[720px] overflow-auto pr-2 scrollbar-hide">
-              {/* Board Intercept */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  <div className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em]">Confidential · Internal Intel</div>
-                </div>
-                <h3 className="text-base font-black text-white mb-1">{NARRATIVE_DOSSIER.board_intercept.title}</h3>
-                <div className="text-[10px] font-mono text-slate-600 mb-4 uppercase tracking-wider">Source: {NARRATIVE_DOSSIER.board_intercept.author}</div>
-                <p className="prose-narrative text-sm leading-relaxed whitespace-pre-line">{NARRATIVE_DOSSIER.board_intercept.content}</p>
               </section>
 
               {/* Strategic Roadmap */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-5">6-Quarter Strategic Roadmap</div>
-                <div className="space-y-2">
-                  {Object.entries(CASE_STUDY_BRIEFING.strategic_roadmap).map(([r, task]) => (
-                    <div
-                      key={r}
-                      className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${
-                        Number(r) === round
-                          ? 'bg-indigo-600/10 border border-indigo-500/20'
-                          : Number(r) < round
-                          ? 'opacity-35'
-                          : 'opacity-50'
-                      }`}
-                    >
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0 ${
-                        Number(r) === round
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                          : Number(r) < round
-                          ? 'bg-slate-800 text-emerald-400'
-                          : 'bg-slate-800 text-slate-600'
-                      }`}>
-                        {Number(r) < round ? '✓' : r}
-                      </div>
-                      <div className="text-[11px] text-slate-400 leading-snug pt-0.5">{task}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Scoring Position */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Your Current Metrics</div>
-                <div className="space-y-3">
-                  {[
-                    { label: 'Human Equity Score', value: myPlayer?.score || '—', unit: '/100', good: (myPlayer?.score || 0) >= 70, desc: 'Composite score' },
-                    { label: 'Engagement Index', value: `${Math.round((currentMetrics.engagement || 0.75) * 100)}`, unit: '%', good: currentMetrics.engagement > 0.7, desc: '1 - Avg. Attrition Risk' },
-                    { label: 'Pay Parity (p-value)', value: currentMetrics.pValue?.toFixed(3) || '0.082', unit: '', good: currentMetrics.pValue > 0.05, desc: '>0.05 = No fault line' },
-                    { label: 'Budget Utilization', value: `${Math.round((currentMetrics.budgetUtil || 0.9) * 100)}`, unit: '%', good: currentMetrics.budgetUtil < 0.95, desc: 'Of merit budget' },
-                  ].map(m => (
-                    <div key={m.label} className="flex items-center justify-between p-3 bg-slate-950/40 rounded-xl border border-white/3">
-                      <div>
-                        <div className="text-[10px] font-bold text-slate-400">{m.label}</div>
-                        <div className="text-[9px] text-slate-700 font-mono">{m.desc}</div>
-                      </div>
-                      <div className={`text-lg font-black font-mono ${m.good ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {m.value}<span className="text-xs">{m.unit}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </div>
-        )}
-
-        {/* ────────────────────────────────────────────────
-            TAB 2: WORKFORCE HUB
-        ──────────────────────────────────────────────── */}
-        {activeTab === 'workforce' && (
-          <div className="bg-slate-900/60 border border-white/5 rounded-2xl overflow-hidden shadow-2xl animate-fade-up">
-            <div className="p-5 bg-slate-900/80 flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-white/5">
-              <div>
-                <h2 className="text-base font-black text-white uppercase tracking-tight">Salary & Equity Audit</h2>
-                <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest mt-0.5">
-                  Live Employee Master File · Case: BharatQuick · Round {round} of 6
+              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-4">
+                  Strategic Roadmap
                 </p>
-              </div>
-              <div className="flex gap-3">
-                <div className="bg-slate-950/60 border border-white/5 rounded-xl px-4 py-2 text-center">
-                  <div className="text-[8px] text-slate-600 font-black uppercase tracking-tighter">1-on-1 Bandwidth</div>
-                  <div className={`text-sm font-black ${interviewedIds.length >= 4 ? 'text-rose-500' : 'text-indigo-400'}`}>
-                    {4 - interviewedIds.length} / 4 Left
-                  </div>
-                </div>
-                <div className="bg-slate-950/60 border border-white/5 rounded-xl px-4 py-2 text-center">
-                  <div className="text-[8px] text-slate-600 font-black uppercase tracking-tighter">Promotion Quota</div>
-                  <div className={`text-sm font-black ${promotedEmployees.length >= 2 ? 'text-rose-500' : 'text-emerald-400'}`}>
-                    {2 - promotedEmployees.length} / 2 Left
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-950/60 text-[9px] uppercase text-slate-600 font-black tracking-widest border-b border-white/5">
-                  <tr>
-                    <th className="px-5 py-3.5">Employee / Role</th>
-                    <th className="px-5 py-3.5">Grade</th>
-                    <th className="px-5 py-3.5">Location</th>
-                    <th className="px-5 py-3.5 text-center">Perf</th>
-                    <th className="px-5 py-3.5">Current CTC</th>
-                    <th className="px-5 py-3.5">Comp-Ratio</th>
-                    <th className="px-5 py-3.5">Status</th>
-                    <th className="px-5 py-3.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(sessionData?.workforce || []).map((emp: any) => {
-                    const cr = emp.currentPay / emp.marketMid;
-                    const isGreenCircle = cr < 0.85;
-                    const hasHadInterview = interviewedIds.includes(emp.id);
-
+                <div className="space-y-1.5">
+                  {Object.entries(CASE_STUDY_BRIEFING.strategic_roadmap).map(([r, desc]) => {
+                    const n = Number(r);
                     return (
-                      <tr key={emp.id} className="border-b border-white/3 hover:bg-white/2 transition group">
-                        <td className="px-5 py-4">
-                          <div className="font-bold text-sm text-slate-200">{emp.name}</div>
-                          <div className="text-[10px] text-slate-600 uppercase tracking-wider">{emp.role}</div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="font-mono text-xs text-slate-400 bg-slate-900 px-2 py-0.5 rounded">{emp.level}</span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="text-xs text-slate-300">{emp.city}</div>
-                          <div className="text-[9px] text-slate-600 uppercase font-black tracking-tighter">Tier {emp.tier}</div>
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-black ${
-                            emp.performance >= 4
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : emp.performance >= 3
-                              ? 'bg-slate-800 text-slate-400'
-                              : 'bg-rose-500/10 text-rose-400'
-                          }`}>
-                            {emp.performance}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 font-mono text-sm text-slate-300">
-                          ₹{(emp.currentPay / 100000).toFixed(1)}L
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-mono text-xs font-bold ${cr < 0.85 ? 'text-rose-400' : cr > 1.1 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                              {cr.toFixed(2)}
-                            </span>
-                            <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${cr < 0.85 ? 'bg-rose-500' : cr > 1.1 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                style={{ width: `${Math.min(cr * 90, 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          {isGreenCircle ? (
-                            <span className="text-[9px] bg-rose-500/15 text-rose-400 border border-rose-500/25 px-2 py-1 rounded-full uppercase font-black risk-pulse">
-                              ● Green Circle
-                            </span>
-                          ) : (
-                            <span className="text-[9px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-1 rounded-full uppercase font-black">
-                              ✓ Stable
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => handleInterview(emp)}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight border transition ${
-                                hasHadInterview
-                                  ? 'bg-indigo-600 text-white border-indigo-600'
-                                  : interviewedIds.length >= 4
-                                  ? 'bg-slate-900 text-slate-700 border-slate-800 cursor-not-allowed'
-                                  : 'text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10'
-                              }`}
-                            >
-                              {hasHadInterview ? 'Reviewed' : '1-on-1'}
-                            </button>
-                            <button
-                              onClick={() => togglePromotion(emp.id)}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight border transition ${
-                                promotedEmployees.includes(emp.id)
-                                  ? 'bg-emerald-600 text-white border-emerald-600'
-                                  : promotedEmployees.length >= 2
-                                  ? 'bg-slate-900 text-slate-700 border-slate-800 cursor-not-allowed'
-                                  : 'text-slate-400 border-slate-700 hover:border-indigo-500 hover:text-indigo-400'
-                              }`}
-                            >
-                              {promotedEmployees.includes(emp.id) ? '✓ Promoted' : 'Promote'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <div
+                        key={r}
+                        className={`flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors ${
+                          n === round ? 'bg-indigo-600/10 border border-indigo-600/15' : ''
+                        }`}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-semibold mt-0.5 ${
+                            n < round
+                              ? 'bg-emerald-700/25 text-emerald-500'
+                              : n === round
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-slate-800 text-slate-600'
+                          }`}
+                        >
+                          {n < round ? '✓' : r}
+                        </div>
+                        <p className={`text-[11px] leading-snug ${
+                          n === round ? 'text-slate-300' : 'text-slate-600'
+                        }`}>
+                          {desc}
+                        </p>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-4 border-t border-white/5 bg-slate-950/30">
-              <p className="text-[10px] text-slate-700 font-mono">
-                Comp-Ratio Legend: <span className="text-rose-400">Red (&lt;0.85) = Green Circle · flight risk</span> · <span className="text-emerald-400">Green (0.85–1.10) = Market-aligned</span> · <span className="text-amber-400">Amber (&gt;1.10) = Above market</span>
-              </p>
+                </div>
+              </section>
             </div>
           </div>
         )}
 
-        {/* ────────────────────────────────────────────────
-            TAB 3: MARKET INTEL
-        ──────────────────────────────────────────────── */}
-        {activeTab === 'market' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-up">
+        {/* ── WORKFORCE ─────────────────────────────────────────────────── */}
+        {tab === 'workforce' && (
+          <div className="animate-in">
+            <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/[0.05] flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-[13px] font-semibold text-white">Workforce Master File</h2>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    BharatQuick · {workforce.length} employees · Round {round}
+                  </p>
+                </div>
+                <div className="flex gap-4 text-[10px] font-mono text-slate-600 text-right shrink-0">
+                  <span>Interviews: {4 - interviewed.length} / 4 left</span>
+                  <span>Promotions: {2 - promoted.length} / 2 left</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/[0.05] text-[10px] font-medium text-slate-600 uppercase tracking-wider">
+                      <th className="text-left px-6 py-3">Employee</th>
+                      <th className="text-left px-4 py-3">Grade</th>
+                      <th className="text-left px-4 py-3">City · Tier</th>
+                      <th className="text-center px-4 py-3">Perf</th>
+                      <th className="text-right px-4 py-3">CTC</th>
+                      <th className="text-right px-4 py-3">Comp-Ratio</th>
+                      <th className="text-center px-4 py-3">Flag</th>
+                      <th className="text-right px-6 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {workforce.map((emp: any) => {
+                      const cr           = emp.currentPay / emp.marketMid;
+                      const isRisk       = cr < 0.85;
+                      const wasInterviewed = interviewed.includes(emp.id);
+                      const isPromoted   = promoted.includes(emp.id);
+
+                      return (
+                        <tr key={emp.id} className="hover:bg-white/[0.015] transition-colors">
+                          <td className="px-6 py-3.5">
+                            <div className="text-[13px] font-medium text-slate-200">{emp.name}</div>
+                            <div className="text-[10px] text-slate-600">{emp.role}</div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="text-[10px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">
+                              {emp.level}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="text-[12px] text-slate-400">{emp.city}</div>
+                            <div className="text-[10px] text-slate-700">Tier {emp.tier}</div>
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className={`text-[12px] font-semibold font-mono ${
+                              emp.performance >= 4
+                                ? 'text-emerald-400'
+                                : emp.performance >= 3
+                                ? 'text-slate-400'
+                                : 'text-red-400'
+                            }`}>
+                              {emp.performance}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-mono text-[12px] text-slate-300">
+                            {fmtLPA(emp.currentPay)}
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-10 h-1 bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    isRisk ? 'bg-red-500' : cr > 1.1 ? 'bg-amber-500' : 'bg-emerald-600'
+                                  }`}
+                                  style={{ width: `${Math.min(cr * 88, 100)}%` }}
+                                />
+                              </div>
+                              <span className={`text-[11px] font-mono font-medium ${
+                                isRisk ? 'text-red-400' : cr > 1.1 ? 'text-amber-400' : 'text-slate-400'
+                              }`}>
+                                {fmtCR(emp.currentPay, emp.marketMid)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            {isRisk
+                              ? <span className="text-[9px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">Risk</span>
+                              : <span className="text-[9px] font-medium text-slate-700 bg-slate-800/60 px-2 py-0.5 rounded-full">Stable</span>
+                            }
+                          </td>
+                          <td className="px-6 py-3.5">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                id={`interview-${emp.id}`}
+                                onClick={() => handleInterview(emp)}
+                                disabled={!wasInterviewed && interviewed.length >= 4}
+                                className={`px-2.5 py-1.5 rounded text-[10px] font-medium transition-colors ${
+                                  wasInterviewed
+                                    ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-600/25'
+                                    : interviewed.length >= 4
+                                    ? 'text-slate-700 cursor-not-allowed'
+                                    : 'text-slate-500 border border-slate-800 hover:border-indigo-600/40 hover:text-indigo-400'
+                                }`}
+                              >
+                                {wasInterviewed ? 'Reviewed' : '1-on-1'}
+                              </button>
+                              <button
+                                id={`promote-${emp.id}`}
+                                onClick={() => togglePromote(emp.id)}
+                                disabled={!isPromoted && promoted.length >= 2}
+                                className={`px-2.5 py-1.5 rounded text-[10px] font-medium transition-colors ${
+                                  isPromoted
+                                    ? 'bg-emerald-600/15 text-emerald-400 border border-emerald-600/25'
+                                    : promoted.length >= 2
+                                    ? 'text-slate-700 cursor-not-allowed'
+                                    : 'text-slate-500 border border-slate-800 hover:border-emerald-600/40 hover:text-emerald-400'
+                                }`}
+                              >
+                                {isPromoted ? '✓ Promoted' : 'Promote'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="px-6 py-2.5 border-t border-white/[0.04] bg-[#070e1b]">
+                <p className="text-[9px] text-slate-700 font-mono">
+                  Comp-Ratio: &lt;0.85 = Risk · 0.85–1.10 = Market · &gt;1.10 = Above market
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── MARKET DATA ───────────────────────────────────────────────── */}
+        {tab === 'market' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in">
             <div className="lg:col-span-2 space-y-6">
-              {/* Geographic Benchmarks */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <BarChart3 className="w-4 h-4 text-indigo-400" />
-                  <h2 className="text-base font-black text-white uppercase tracking-tight">Geographic Market Benchmarks (P50)</h2>
-                </div>
-                <div className="space-y-3">
+
+              {/* Salary benchmarks */}
+              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-5">
+                  Salary Benchmarks · P50 Market Median
+                </p>
+                <div className="divide-y divide-white/[0.04]">
                   {[
-                    { tier: 'Tier 1 — Mumbai / Bengaluru', staff: '₹18–25L', sales: '₹12L + 2x Acc', exec: '₹60–90L LTI-heavy', heat: 'Critical' },
-                    { tier: 'Tier 2 — Pune / Hyderabad', staff: '₹12–18L', sales: '₹8L + 1.5x Acc', exec: '₹45–60L', heat: 'High' },
-                    { tier: 'Tier 3 — Jaipur / Kochi', staff: '₹6–10L', sales: '₹5L + 1x Acc', exec: '₹30–40L', heat: 'Moderate' },
-                    { tier: 'Tier 4 — Mysore / Indore', staff: '₹4–7L', sales: '₹4L + flat commission', exec: '₹20–30L', heat: 'Moderate' },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex flex-col md:flex-row md:items-center md:justify-between p-4 bg-slate-950/40 rounded-xl border border-white/4 hover:border-indigo-500/20 transition-colors group">
-                      <div className="flex items-center gap-3 mb-2 md:mb-0">
-                        <div className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${
-                          item.heat === 'Critical' ? 'bg-rose-500/15 text-rose-400'
-                          : item.heat === 'High' ? 'bg-amber-500/15 text-amber-400'
-                          : 'bg-slate-800 text-slate-500'
-                        }`}>{item.heat}</div>
-                        <span className="font-bold text-sm text-slate-200">{item.tier}</span>
-                      </div>
-                      <div className="flex gap-6 text-[11px] font-mono">
-                        <span className="text-slate-600">Staff: <b className="text-indigo-400">{item.staff}</b></span>
-                        <span className="text-slate-600">Sales: <b className="text-emerald-400">{item.sales}</b></span>
-                        <span className="text-slate-600">Exec: <b className="text-amber-400">{item.exec}</b></span>
+                    { tier: 'Tier 1 — Mumbai / Bengaluru',   staff: '₹18–25L', sales: '₹12L + variable', exec: '₹60–90L' },
+                    { tier: 'Tier 2 — Pune / Hyderabad',     staff: '₹12–18L', sales: '₹8L + variable',  exec: '₹45–60L' },
+                    { tier: 'Tier 3 — Jaipur / Kochi',       staff: '₹6–10L',  sales: '₹5L + variable',  exec: '₹30–40L' },
+                    { tier: 'Tier 4 — Mysore / Indore',      staff: '₹4–7L',   sales: '₹4L + commission',exec: '₹20–30L' },
+                  ].map((row, i) => (
+                    <div key={i} className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span className="text-[12px] font-medium text-slate-300">{row.tier}</span>
+                      <div className="flex gap-4 text-[11px] font-mono text-slate-600">
+                        <span>Staff: <b className="text-slate-400">{row.staff}</b></span>
+                        <span>Sales: <b className="text-slate-400">{row.sales}</b></span>
+                        <span>Exec:  <b className="text-slate-400">{row.exec}</b></span>
                       </div>
                     </div>
                   ))}
                 </div>
               </section>
 
-              {/* Market Intel Feed */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Intelligence Hub</div>
-                <h3 className="text-base font-black text-white mb-1">{NARRATIVE_DOSSIER.market_gossip.title}</h3>
-                <p className="prose-narrative text-sm leading-relaxed whitespace-pre-line mt-4">{NARRATIVE_DOSSIER.market_gossip.content}</p>
+              {/* Board intercept */}
+              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6">
+                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+                  Board Intercept — Confidential
+                </p>
+                <h3 className="text-[13px] font-semibold text-white mb-4">
+                  {NARRATIVE_DOSSIER.board_intercept.title}
+                </h3>
+                <p className="text-[10px] text-slate-700 font-mono mb-4">
+                  {NARRATIVE_DOSSIER.board_intercept.author}
+                </p>
+                <div className="prose-sim space-y-3">
+                  {NARRATIVE_DOSSIER.board_intercept.content.split('\n\n').map((p, i) => (
+                    <p key={i}>{p}</p>
+                  ))}
+                </div>
               </section>
             </div>
 
-            {/* Right: Volatility Cards */}
-            <div className="space-y-4">
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <h3 className="text-sm font-black text-white uppercase mb-5">Market Volatility Index</h3>
-                <div className="space-y-4">
-                  <div className="p-4 bg-rose-500/5 border border-rose-500/20 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
-                      <h4 className="text-[10px] font-black text-rose-400 uppercase tracking-wider">Critical — Tech Metros</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">Bengaluru Tech talent demanding LTI-primary packages. Retention cost expected +18% YoY.</p>
-                  </div>
-                  <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                      <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-wider">High — International Drain</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">UAE expat offers targeting Tier-3 talent with 2.2x effective purchasing power advantage.</p>
-                  </div>
-                  <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingDown className="w-3.5 h-3.5 text-emerald-400" />
-                      <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Opportunity — Geo Arbitrage</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">Tier-3 employees outperforming on per-rupee productivity by 34%. Strong ROI case for targeted investment.</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Competitor Activity */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Competitor Moves</h3>
-                <div className="space-y-3 text-[11px]">
+            {/* Market signals sidebar */}
+            <div>
+              <section className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-5">
+                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-5">
+                  Market Signals
+                </p>
+                <div className="space-y-5">
                   {[
-                    { co: 'DunzoScale', action: 'Launched 2.5x Sales Accelerator for account managers' },
-                    { co: 'Zepto', action: 'Offering 25% LTI in senior tech CTC packages' },
-                    { co: 'UAE Fintechs', action: 'Active Tier-3 India pipeline with relocation + tax-free AED' },
-                  ].map(c => (
-                    <div key={c.co} className="flex items-start gap-2.5 border-b border-white/4 pb-3 last:border-0 last:pb-0">
-                      <span className="w-2 h-2 rounded-full bg-rose-500/60 mt-1.5 flex-shrink-0" />
-                      <div>
-                        <span className="font-bold text-white">{c.co}</span>
-                        <span className="text-slate-500"> — {c.action}</span>
+                    {
+                      label:  'Bengaluru Tech',
+                      level:  'Critical',
+                      note:   'Tier-1 engineering talent now treats LTI as a primary decision factor. Firms without meaningful equity upside are being screened out at offer stage.',
+                    },
+                    {
+                      label:  'Sales Sector',
+                      level:  'High',
+                      note:   'Competitor DunzoScale launched a 2.5x accelerator last month. Three BharatQuick AMs have since accepted recruiter calls.',
+                    },
+                    {
+                      label:  'International Drain',
+                      level:  'High',
+                      note:   'Spike in Tier-2 and Tier-3 managers receiving UAE expat packages. Effective purchasing-power gap estimated at 2.2× versus INR fixed salary.',
+                    },
+                    {
+                      label:  'Tier-3 Productivity',
+                      level:  'Opportunity',
+                      note:   'Tier-3 employees outperform Tier-1 counterparts on per-rupee productivity by an estimated 34%. Retention ROI is strong at this band.',
+                    },
+                  ].map((s, i) => (
+                    <div key={i} className="border-l-2 border-slate-800 pl-3.5">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-[12px] font-medium text-slate-300">{s.label}</span>
+                        <span className={`text-[9px] font-semibold uppercase tracking-wider ${
+                          s.level === 'Critical'    ? 'text-red-500'
+                          : s.level === 'High'      ? 'text-amber-500'
+                          : 'text-emerald-500'
+                        }`}>
+                          {s.level}
+                        </span>
                       </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">{s.note}</p>
                     </div>
                   ))}
                 </div>
@@ -794,244 +652,576 @@ export default function GameDashboard() {
           </div>
         )}
 
-        {/* ────────────────────────────────────────────────
-            TAB 4: STRATEGIC CONSOLE
-        ──────────────────────────────────────────────── */}
-        {activeTab === 'execution' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-up">
+        {/* ── DECISIONS ─────────────────────────────────────────────────── */}
+        {tab === 'decisions' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
 
-            {/* LEFT: LEVERS */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-base font-black text-white uppercase tracking-tight">Decision Levers</h2>
-                <div className="text-[10px] text-slate-600 font-mono">Round {round} of 6 · {roundStory?.act}</div>
-              </div>
+            {/* Levers */}
+            <div className="space-y-5">
+              <h2 className="text-[13px] font-semibold text-slate-300">Decision Levers</h2>
 
-              {/* Round Mandate Reminder */}
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 mb-2">
-                <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Scoring Focus This Round</div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">{roundStory?.scoring_lens}</p>
-              </div>
-
-              {/* LEVER: Merit Pool */}
-              <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{LEVER_CONFIG.meritPool.label}</div>
-                    <button onClick={() => setActiveLeverInfo('meritPool')} className="text-slate-700 hover:text-indigo-400 transition">
-                      <Info className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="text-2xl font-black text-indigo-400 font-mono">
-                    {LEVER_CONFIG.meritPool.display(decisions.meritPool)}
-                  </div>
-                </div>
+              {/* Merit Pool */}
+              <LeverCard
+                id="lever-merit"
+                label="Merit Pool"
+                description="Percentage salary increase applied across all employees, weighted by performance rating"
+                displayValue={fmtPct(decisions.meritPool)}
+              >
                 <input
-                  type="range" min="0" max="0.30" step="0.01"
+                  id="slider-merit"
+                  type="range" min={0} max={0.3} step={0.01}
                   value={decisions.meritPool}
-                  onChange={(e) => setDecisions({ ...decisions, meritPool: parseFloat(e.target.value) })}
-                  className="w-full accent-indigo-500 mb-3"
-                  style={{ background: `linear-gradient(90deg, #6366f1 ${(decisions.meritPool / 0.30) * 100}%, #1e293b ${(decisions.meritPool / 0.30) * 100}%)` }}
+                  onChange={(e) => setDecisions((d) => ({ ...d, meritPool: +e.target.value }))}
+                  style={{ background: sliderBg(decisions.meritPool / 0.3) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700">
-                  <span>0% (No Change)</span>
-                  <span>30% (Crisis Mode)</span>
+                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                  <span>0%</span><span>30%</span>
                 </div>
-                {decisions.meritPool > 0.15 && (
-                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-rose-400">
-                    <AlertTriangle className="w-3 h-3" /> Above 15% — CFO review likely triggered
-                  </div>
-                )}
-              </div>
+              </LeverCard>
 
-              {/* LEVER: Sales Accelerator */}
-              <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{LEVER_CONFIG.salesAcc.label}</div>
-                    <button onClick={() => setActiveLeverInfo('salesAcc')} className="text-slate-700 hover:text-indigo-400 transition">
-                      <Info className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="text-2xl font-black text-emerald-400 font-mono">
-                    {LEVER_CONFIG.salesAcc.display(decisions.salesAcc)}
-                  </div>
-                </div>
+              {/* Sales Accelerator */}
+              <LeverCard
+                id="lever-sales"
+                label="Sales Accelerator"
+                description="Commission rate multiplier that activates above 100% of quarterly sales target"
+                displayValue={`${decisions.salesAcc.toFixed(1)}×`}
+              >
                 <input
-                  type="range" min="1.0" max="3.0" step="0.1"
+                  id="slider-sales"
+                  type="range" min={1.0} max={3.0} step={0.1}
                   value={decisions.salesAcc}
-                  onChange={(e) => setDecisions({ ...decisions, salesAcc: parseFloat(e.target.value) })}
-                  className="w-full accent-emerald-500 mb-3"
-                  style={{ background: `linear-gradient(90deg, #10b981 ${((decisions.salesAcc - 1) / 2) * 100}%, #1e293b ${((decisions.salesAcc - 1) / 2) * 100}%)` }}
+                  onChange={(e) => setDecisions((d) => ({ ...d, salesAcc: +e.target.value }))}
+                  style={{ background: sliderBg((decisions.salesAcc - 1) / 2) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700">
-                  <span>1.0x (Linear / Status Quo)</span>
-                  <span>3.0x (Market Edge)</span>
+                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                  <span>1.0× (Linear)</span><span>3.0×</span>
                 </div>
-                {decisions.salesAcc < 1.5 && (
-                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-400">
-                    <AlertTriangle className="w-3 h-3" /> Below behavioral threshold — quota plateau likely continues
-                  </div>
-                )}
-              </div>
+              </LeverCard>
 
-              {/* LEVER: LTI Mix */}
-              <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{LEVER_CONFIG.ltiMix.label}</div>
-                    <button onClick={() => setActiveLeverInfo('ltiMix')} className="text-slate-700 hover:text-indigo-400 transition">
-                      <Info className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="text-2xl font-black text-amber-400 font-mono">
-                    {LEVER_CONFIG.ltiMix.display(decisions.ltiMix)}
-                  </div>
-                </div>
+              {/* Executive LTI Mix */}
+              <LeverCard
+                id="lever-lti"
+                label="Executive LTI Mix"
+                description="Proportion of executive variable pay allocated as long-term equity rather than immediate cash"
+                displayValue={fmtPct(decisions.ltiMix)}
+              >
                 <input
-                  type="range" min="0" max="0.60" step="0.05"
+                  id="slider-lti"
+                  type="range" min={0} max={0.6} step={0.05}
                   value={decisions.ltiMix}
-                  onChange={(e) => setDecisions({ ...decisions, ltiMix: parseFloat(e.target.value) })}
-                  className="w-full accent-amber-500 mb-3"
-                  style={{ background: `linear-gradient(90deg, #f59e0b ${(decisions.ltiMix / 0.60) * 100}%, #1e293b ${(decisions.ltiMix / 0.60) * 100}%)` }}
+                  onChange={(e) => setDecisions((d) => ({ ...d, ltiMix: +e.target.value }))}
+                  style={{ background: sliderBg(decisions.ltiMix / 0.6) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700">
-                  <span>0% (Full Cash)</span>
-                  <span>60% (IPO Alignment)</span>
+                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                  <span>0% (Full cash)</span><span>60%</span>
                 </div>
-                {round >= 5 && decisions.ltiMix < 0.35 && (
-                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-rose-400">
-                    <AlertTriangle className="w-3 h-3" /> Below IPO governance threshold — will be flagged in DRHP
-                  </div>
-                )}
-              </div>
+              </LeverCard>
 
-              {/* LEVER: Equity Pool */}
-              <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{LEVER_CONFIG.parityPool.label}</div>
-                    <button onClick={() => setActiveLeverInfo('parityPool')} className="text-slate-700 hover:text-indigo-400 transition">
-                      <Info className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="text-2xl font-black text-violet-400 font-mono">
-                    {LEVER_CONFIG.parityPool.display(decisions.parityPool)}
-                  </div>
-                </div>
+              {/* Equity Adjustment Pool */}
+              <LeverCard
+                id="lever-equity"
+                label="Equity Adjustment Pool"
+                description="Discretionary budget directed at specific pay anomalies in the workforce"
+                displayValue={fmtLPA(decisions.parityPool)}
+              >
                 <input
-                  type="range" min="0" max="1000000" step="50000"
+                  id="slider-equity"
+                  type="range" min={0} max={1000000} step={50000}
                   value={decisions.parityPool}
-                  onChange={(e) => setDecisions({ ...decisions, parityPool: parseInt(e.target.value) })}
-                  className="w-full accent-indigo-500 mb-3"
-                  style={{ background: `linear-gradient(90deg, #8b5cf6 ${(decisions.parityPool / 1000000) * 100}%, #1e293b ${(decisions.parityPool / 1000000) * 100}%)` }}
+                  onChange={(e) => setDecisions((d) => ({ ...d, parityPool: +e.target.value }))}
+                  style={{ background: sliderBg(decisions.parityPool / 1000000) }}
                 />
-                <div className="flex justify-between text-[9px] font-mono text-slate-700">
-                  <span>₹0 (No Intervention)</span>
-                  <span>₹10L (Emergency Pool)</span>
+                <div className="flex justify-between text-[9px] font-mono text-slate-700 mt-1">
+                  <span>₹0</span><span>₹10L</span>
                 </div>
-              </div>
+              </LeverCard>
             </div>
 
-            {/* RIGHT: SUMMARY + SUBMIT */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-base font-black text-white uppercase tracking-tight">Decision Summary</h2>
-                <div className={`text-[10px] font-mono px-2 py-1 rounded-full uppercase ${submitted ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/10 text-amber-400 animate-pulse'}`}>
-                  {submitted ? '✓ Submitted' : '● Pending'}
-                </div>
+            {/* Submission summary */}
+            <div className="space-y-5">
+              <h2 className="text-[13px] font-semibold text-slate-300">Submission Summary</h2>
+
+              {/* Metrics */}
+              <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-4 grid grid-cols-2 gap-3">
+                {[
+                  { l: 'HES Score',    v: myPlayer?.score ?? '—',    good: (myPlayer?.score ?? 0) >= 65 },
+                  { l: 'Engagement',   v: fmtPct(metrics.engagement), good: metrics.engagement > 0.7    },
+                  { l: 'Parity p',     v: metrics.pValue?.toFixed(3) ?? '—', good: metrics.pValue > 0.05 },
+                  { l: 'Turnover',     v: fmtPct(metrics.turnover),   good: metrics.turnover < 0.08     },
+                ].map((m) => (
+                  <div key={m.l} className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 text-center">
+                    <div className={`text-xl font-bold font-mono ${m.good ? 'text-slate-200' : 'text-red-400'}`}>
+                      {m.v}
+                    </div>
+                    <div className="text-[9px] text-slate-600 uppercase tracking-wider mt-1">{m.l}</div>
+                  </div>
+                ))}
               </div>
 
-              {/* Metrics Preview */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
-                <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-5">Current Scorecard</div>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  {[
-                    { label: 'HES Score', value: myPlayer?.score || '78', unit: '', color: 'text-indigo-400', bar: myPlayer?.score || 78 },
-                    { label: 'Engagement', value: `${Math.round((currentMetrics.engagement || 0.75) * 100)}`, unit: '%', color: 'text-emerald-400', bar: Math.round((currentMetrics.engagement || 0.75) * 100) },
-                    { label: 'Parity (p)', value: currentMetrics.pValue?.toFixed(3) || '0.082', unit: '', color: currentMetrics.pValue > 0.05 ? 'text-emerald-400' : 'text-rose-400', bar: null },
-                    { label: 'Budget Used', value: `${Math.round((currentMetrics.budgetUtil || 0.9) * 100)}`, unit: '%', color: (currentMetrics.budgetUtil || 0) > 0.95 ? 'text-rose-400' : 'text-slate-300', bar: null },
-                  ].map(m => (
-                    <div key={m.label} className="bg-slate-950/40 rounded-xl p-4 border border-white/3 text-center">
-                      {m.bar !== null && (
-                        <div className="h-1 bg-slate-800 rounded-full overflow-hidden mb-3">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${m.bar}%` }} />
-                        </div>
-                      )}
-                      <div className={`text-xl font-black font-mono ${m.color}`}>{m.value}<span className="text-xs">{m.unit}</span></div>
-                      <div className="text-[9px] text-slate-600 uppercase tracking-wider mt-1">{m.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Promotions Summary */}
-              <section className="bg-slate-900/60 border border-white/5 rounded-2xl p-5">
+              {/* Promotions */}
+              <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Promotions Nominated</div>
-                  <div className="text-xs font-black text-white">{promotedEmployees.length} / 2</div>
+                  <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.15em]">
+                    Promotions Nominated
+                  </p>
+                  <span className="text-[10px] text-slate-700 font-mono">{promoted.length} / 2</span>
                 </div>
-                {promotedEmployees.length === 0 ? (
-                  <p className="text-[11px] text-slate-700 italic">No promotions nominated this round. Review Workforce Hub.</p>
+                {promoted.length === 0 ? (
+                  <p className="text-[11px] text-slate-700 italic">
+                    None — use the Workforce tab to nominate employees.
+                  </p>
                 ) : (
                   <div className="space-y-2">
-                    {(sessionData?.workforce || [])
-                      .filter((e: any) => promotedEmployees.includes(e.id))
+                    {workforce
+                      .filter((e: any) => promoted.includes(e.id))
                       .map((e: any) => (
-                        <div key={e.id} className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">
+                        <div key={e.id} className="flex items-center justify-between text-[12px]">
                           <div>
-                            <div className="text-xs font-bold text-white">{e.name}</div>
-                            <div className="text-[9px] text-slate-600">{e.role} · +15% CTC</div>
+                            <span className="font-medium text-slate-300">{e.name}</span>
+                            <span className="text-slate-600 ml-2 text-[10px]">{e.level} → +15% CTC</span>
                           </div>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
                         </div>
                       ))}
                   </div>
                 )}
-              </section>
-
-              {/* Leadership Advisory */}
-              <div className="bg-indigo-900/10 border border-indigo-500/15 p-5 rounded-2xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-indigo-400" />
-                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider">Strategic Advisory</span>
-                </div>
-                <p className="text-[11px] text-slate-400 italic leading-relaxed">
-                  "Success in this simulation is not about finding a single 'right' number. It is about balancing the competing interests of individual stars, collective fairness, and corporate sustainability — simultaneously, under real constraints."
-                </p>
-                <div className="text-[9px] text-slate-700 mt-2 font-mono">— CHRO Ananya Mehta, Pre-Simulation Briefing</div>
               </div>
 
-              {/* SUBMIT BUTTON */}
+              {/* Submit */}
               {submitted ? (
-                <div className="w-full py-5 bg-emerald-600/15 border border-emerald-600/30 text-emerald-400 font-black uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 text-sm">
-                  <CheckCircle2 className="w-5 h-5" />
-                  Strategic Plan Deployed to HQ
+                <div className="w-full py-4 bg-emerald-700/10 border border-emerald-700/20 rounded-xl flex items-center justify-center gap-2 text-emerald-400 text-[13px] font-medium">
+                  <Check className="w-4 h-4" />
+                  Decisions Submitted
                 </div>
               ) : (
                 <button
+                  id="submit-decisions-btn"
                   onClick={handleSubmit}
-                  id="authorize-decisions-btn"
-                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-indigo-500/15 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 text-sm group"
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-xl transition-colors flex items-center justify-center gap-2 group"
                 >
-                  Authorize Round {round} Decisions
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Submit Round {round} Decisions
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               )}
 
-              <p className="text-[10px] text-slate-700 text-center font-mono">
-                Decisions are final once authorized. The professor may advance to the next round after all teams submit.
+              <p className="text-[10px] text-slate-700 text-center">
+                Decisions are final once submitted. The professor advances the round.
               </p>
             </div>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/4 px-8 py-3 flex justify-between text-[9px] font-mono text-slate-800 uppercase tracking-widest">
-        <div>BharatQuick Simulation · CompSim Pro v3.0 · MBA Total Rewards</div>
-        <div>© 2026 CompSim Pro Systems · All decisions are simulated</div>
+      {/* 1-on-1 Pulse Modal */}
+      {pulse && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm"
+          onClick={() => setPulse(null)}
+        >
+          <div
+            className="w-full max-w-md bg-[#0d1a2e] border border-white/[0.08] rounded-2xl p-8 shadow-2xl animate-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-1">
+              Confidential 1-on-1
+            </p>
+            <p className="text-[11px] text-slate-600 mb-5">{pulse.role}</p>
+            <h3 className="font-display text-2xl font-bold italic text-white mb-6">{pulse.name}</h3>
+            <div className="border-l-2 border-slate-700 pl-5 mb-7">
+              <p className="prose-sim italic">"{pulse.quote}"</p>
+            </div>
+            <button
+              onClick={() => setPulse(null)}
+              className="w-full py-2.5 text-[12px] text-slate-500 border border-slate-800 rounded-lg hover:border-slate-600 hover:text-slate-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  LEVER CARD — reusable decision control
+// ════════════════════════════════════════════════════════════════════════════
+
+function LeverCard({
+  id, label, description, displayValue, children,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  displayValue: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div id={id} className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-[0.13em]">{label}</p>
+          <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">{description}</p>
+        </div>
+        <span className="text-2xl font-bold font-mono text-white shrink-0">{displayValue}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ONBOARDING SCREEN
+// ════════════════════════════════════════════════════════════════════════════
+
+function OnboardingScreen({
+  slide, slideIdx, total, onNext, onBack, isLast, playerName,
+}: {
+  slide: OnboardingSlide;
+  slideIdx: number;
+  total: number;
+  onNext: () => void;
+  onBack?: () => void;
+  isLast: boolean;
+  playerName: string;
+}) {
+  return (
+    <div className="slide-root">
+      <header className="slide-header">
+        <span className="text-[12px] font-medium text-slate-500">BharatQuick · Case Study</span>
+        <span className="text-[11px] text-slate-700">{playerName}</span>
+      </header>
+
+      <main className="slide-main">
+        {slide.type === 'text'  && <TextSlide  slide={slide} />}
+        {slide.type === 'memo'  && <MemoSlide  slide={slide} />}
+        {slide.type === 'guide' && <GuideSlide slide={slide} />}
+      </main>
+
+      <footer className="slide-footer">
+        {/* Progress dots */}
+        <div className="flex gap-1.5 items-center">
+          {Array.from({ length: total }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-[3px] rounded-full transition-all duration-300 ${
+                i === slideIdx
+                  ? 'bg-indigo-500 w-5'
+                  : i < slideIdx
+                  ? 'bg-slate-600 w-1.5'
+                  : 'bg-slate-800 w-1.5'
+              }`}
+            />
+          ))}
+        </div>
+        {/* Navigation */}
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-400 transition-colors"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Back
+            </button>
+          )}
+          <button
+            id="onboarding-next-btn"
+            onClick={onNext}
+            className="flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors"
+          >
+            {isLast ? 'Begin Simulation' : 'Continue'}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </footer>
+    </div>
+  );
+}
+
+// ── Text slide ──────────────────────────────────────────────────────────────
+
+function TextSlide({ slide }: { slide: OnboardingSlide }) {
+  const half = Math.ceil(slide.paragraphs.length / 2);
+  const left  = slide.paragraphs.slice(0, half);
+  const right = slide.paragraphs.slice(half);
+  const twoCol = slide.paragraphs.length > 2;
+
+  return (
+    <div className="max-w-5xl mx-auto px-10 lg:px-16 py-14">
+      <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-5">
+        {slide.category}
+      </p>
+      <h1 className="font-display text-[3.2rem] lg:text-[4rem] font-bold italic text-white leading-none mb-2">
+        {slide.headline}
+      </h1>
+      {slide.subheadline && (
+        <p className="text-base text-slate-500 font-light mb-8">{slide.subheadline}</p>
+      )}
+      <div className="h-px bg-white/[0.06] mb-10" />
+      <div className={twoCol ? 'grid grid-cols-1 lg:grid-cols-2 gap-12' : 'max-w-2xl'}>
+        <div className="prose-sim space-y-5">{left.map((p, i) => <p key={i}>{p}</p>)}</div>
+        {twoCol && (
+          <div className="prose-sim space-y-5">{right.map((p, i) => <p key={i}>{p}</p>)}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Memo slide ──────────────────────────────────────────────────────────────
+
+function MemoSlide({ slide }: { slide: OnboardingSlide }) {
+  return (
+    <div className="max-w-3xl mx-auto px-10 lg:px-16 py-14">
+      <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-5">
+        {slide.category}
+      </p>
+      <h1 className="font-display text-[2.6rem] font-bold italic text-white leading-tight mb-1">
+        {slide.headline}
+      </h1>
+      {slide.subheadline && (
+        <p className="text-[13px] text-slate-500 font-light mb-8">{slide.subheadline}</p>
+      )}
+      <div className="h-px bg-white/[0.06] mb-10" />
+      {slide.memo && (
+        <p className="text-[10px] text-slate-600 font-mono uppercase tracking-wider mb-6">
+          From: {slide.memo.from}
+        </p>
+      )}
+      <div className="border-l-2 border-slate-800 pl-8">
+        <div className="prose-sim space-y-5">
+          {slide.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Guide slide (Simulation Guide) ─────────────────────────────────────────
+
+function GuideSlide({ slide }: { slide: OnboardingSlide }) {
+  return (
+    <div className="max-w-6xl mx-auto px-10 lg:px-16 py-12">
+      <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-4">
+        {slide.category}
+      </p>
+      <h1 className="font-display text-[2.6rem] font-bold italic text-white mb-6">
+        {slide.headline}
+      </h1>
+      <div className="h-px bg-white/[0.06] mb-8" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+        {/* Left: intro paragraphs + glossary */}
+        <div>
+          <div className="prose-sim space-y-4 mb-8">
+            {slide.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+          </div>
+          {slide.glossary && (
+            <>
+              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-4">
+                Key Terms
+              </p>
+              <div className="space-y-4">
+                {slide.glossary.map((g, i) => (
+                  <div key={i}>
+                    <span className="text-[12px] font-semibold text-slate-300">{g.term}</span>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{g.definition}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right: decision levers */}
+        {slide.levers && (
+          <div>
+            <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-4">
+              Decision Levers
+            </p>
+            <div className="space-y-4">
+              {slide.levers.map((lv, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="w-5 h-5 rounded bg-indigo-600/10 border border-indigo-600/20 flex-shrink-0 flex items-center justify-center mt-0.5">
+                    <span className="text-[9px] font-bold text-indigo-400">{i + 1}</span>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-slate-300">{lv.name}</p>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{lv.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ROUND BRIEF SCREEN
+// ════════════════════════════════════════════════════════════════════════════
+
+function RoundBriefScreen({
+  story, round, playerName, prevScore, onEnter,
+}: {
+  story: RoundStory;
+  round: number;
+  playerName: string;
+  prevScore: number | null;
+  onEnter: () => void;
+}) {
+  const total    = ONBOARDING_CONTENT.length + 1;
+  const slideIdx = ONBOARDING_CONTENT.length; // always last dot
+
+  return (
+    <div className="slide-root">
+      <header className="slide-header">
+        <span className="text-[12px] font-medium text-slate-500">BharatQuick · Case Study</span>
+        <div className="flex items-center gap-4">
+          {prevScore !== null && (
+            <span className="text-[11px] text-slate-600 font-mono">
+              HES: <span className="text-indigo-400 font-semibold">{prevScore}</span>
+            </span>
+          )}
+          <span className="text-[11px] text-slate-700">{playerName}</span>
+        </div>
+      </header>
+
+      <main className="slide-main">
+        <div className="max-w-6xl mx-auto px-10 lg:px-16 py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+
+            {/* Story — left 3 cols */}
+            <div className="lg:col-span-3">
+              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-4">
+                {story.act}
+              </p>
+              <h1 className="font-display text-[3rem] lg:text-[3.5rem] font-bold italic text-white leading-tight mb-8">
+                {story.title}
+              </h1>
+              <div className="h-px bg-white/[0.06] mb-8" />
+              <div className="prose-sim space-y-5">
+                {story.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+              </div>
+            </div>
+
+            {/* Available actions — right 2 cols */}
+            <div className="lg:col-span-2">
+              <div className="bg-[#0c1423] border border-white/[0.06] rounded-xl p-6 sticky top-8">
+                <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-5">
+                  Available Actions This Round
+                </p>
+                <div className="space-y-4">
+                  {story.available_actions.map((action, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="w-5 h-5 rounded bg-white/[0.04] flex-shrink-0 flex items-center justify-center mt-0.5">
+                        <span className="text-[9px] font-semibold text-slate-600">{i + 1}</span>
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-semibold text-slate-300">{action.name}</p>
+                        <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{action.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer className="slide-footer">
+        <div className="flex gap-1.5 items-center">
+          {Array.from({ length: total }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-[3px] rounded-full transition-all duration-300 ${
+                i === slideIdx
+                  ? 'bg-indigo-500 w-5'
+                  : 'bg-slate-600 w-1.5'
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          id="enter-round-btn"
+          onClick={onEnter}
+          className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium rounded-lg transition-colors group"
+        >
+          Enter Round {round}
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </footer>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  END SCREEN
+// ════════════════════════════════════════════════════════════════════════════
+
+function EndScreen({
+  playerName, score, metrics,
+}: {
+  playerName: string;
+  score: number;
+  metrics: any;
+}) {
+  const label =
+    score >= 75 ? 'Excellent'
+    : score >= 60 ? 'Satisfactory'
+    : score >= 45 ? 'Needs Review'
+    : 'Below Standard';
+
+  return (
+    <div className="min-h-screen bg-[#050a18] bg-grid flex flex-col items-center justify-center p-8">
+      <div className="w-full max-w-md text-center">
+
+        <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.22em] mb-6">
+          Simulation Complete · CompSim Pro
+        </p>
+        <h1 className="font-display text-[3rem] font-bold italic text-white leading-none mb-2">
+          BharatQuick
+        </h1>
+        <p className="text-[13px] text-slate-500 font-light mb-1">Total Rewards Strategy Simulation</p>
+        <p className="text-[11px] text-slate-700 mb-10">MBA Case Study</p>
+
+        <div className="h-px bg-white/[0.06] mb-10" />
+
+        <p className="text-[14px] font-medium text-slate-300 mb-0.5">{playerName}</p>
+        <p className="text-[11px] text-slate-600 mb-10">Compensation Lead, Total Rewards · BharatQuick</p>
+
+        {/* HES score */}
+        <div className="inline-flex flex-col items-center bg-[#0c1423] border border-white/[0.06] rounded-2xl px-12 py-8 mb-8 w-full">
+          <p className="text-[10px] font-medium text-slate-600 uppercase tracking-[0.18em] mb-2">
+            Final Human Equity Score
+          </p>
+          <div className="text-[5rem] font-bold font-mono text-indigo-400 leading-none mb-2">
+            {score}
+          </div>
+          <div className="text-[11px] font-medium text-slate-500">{label}</div>
+        </div>
+
+        {/* Final metrics */}
+        <div className="grid grid-cols-3 gap-3 mb-10">
+          {[
+            { l: 'Engagement',  v: fmtPct(metrics.engagement ?? 0.75) },
+            { l: 'Turnover',    v: fmtPct(metrics.turnover ?? 0.08)    },
+            { l: 'Parity p',    v: metrics.pValue?.toFixed(3) ?? '—'   },
+          ].map((m) => (
+            <div key={m.l} className="bg-[#0c1423] border border-white/[0.05] rounded-xl p-4">
+              <div className="text-xl font-bold font-mono text-slate-200 mb-1">{m.v}</div>
+              <div className="text-[9px] text-slate-600 uppercase tracking-wider">{m.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[11px] text-slate-600 leading-relaxed">
+          Your decisions across six quarters have shaped BharatQuick's compensation strategy and IPO readiness. Debrief with your class to discuss the trade-offs and alternative approaches.
+        </p>
+      </div>
     </div>
   );
 }
