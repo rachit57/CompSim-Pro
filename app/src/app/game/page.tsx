@@ -73,6 +73,7 @@ export default function GamePage() {
   const [promoted,    setPromoted]    = useState<string[]>([]);
   const [interviewed, setInterviewed] = useState<string[]>([]);
   const [submitted,   setSubmitted]   = useState(false);
+  const [clientRound, setClientRound] = useState<number | null>(null);
   const [pulse, setPulse] = useState<{ name: string; role: string; quote: string } | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const { theme, toggle: toggleTheme } = useTheme();
@@ -98,6 +99,7 @@ export default function GamePage() {
     // Professor advances: only interrupt if already playing
     socket.on('round_advanced', (data) => {
       updateSessionData(data);
+      setClientRound(null); // Sync back to server's truth if the professor advances it globally
       setPhase((prev) =>
         prev.type === 'playing' ? { type: 'round-brief' } : prev,
       );
@@ -132,7 +134,7 @@ export default function GamePage() {
     );
   }
 
-  const round: number   = sessionData.round ?? 1;
+  const round: number   = clientRound ?? sessionData.round ?? 1;
   const myId            = socket.id as string;
   const myPlayer        = sessionData.players?.[myId];
   const metrics         = myPlayer?.metrics ?? {
@@ -151,17 +153,14 @@ export default function GamePage() {
     
     // Auto advance local state
     if (round < 6) {
+      setClientRound(round + 1);
       setPhase({ type: 'round-brief' }); 
       setDecisions(DEFAULT_DECISIONS);
       setPromoted([]);
       setInterviewed([]);
       setSubmitted(false);
-      // Bump round locally so the next brief matches the upcoming round state
-      updateSessionData({
-        ...sessionData,
-        round: round + 1
-      });
     } else {
+      setSubmitted(true);
       setTimeout(() => setPhase({ type: 'end' }), 1400);
     }
   };
