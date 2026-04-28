@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "install": "npm install --prefix app && npm install --prefix server",
+    "install": "npm install",
+    "build:app": "cd app && npm run build",
+    "build": "npm run build:app",
+    "start:app": "cd app && npm run start",
     "start": "npm run start:app",
     "dev:app": "cd app && npm run dev",
-    "dev:server": "cd server && node server.js",
-    "build:app": "cd app && npm run build",
-    "build": "npm run build:app"
+    "dev:server": "cd server && node server.js"
   },
   "workspaces": [
     "app",
     "server"
   ]
-
 }
