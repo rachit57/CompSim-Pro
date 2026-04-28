@@ -240,30 +240,38 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
         <p className="text-[11px] text-[var(--text-muted)]">These 4 critical employees have submitted ultimatums. Allocate the remaining discretionary budget to retain them. If you overspend, you fail the IPO audit.</p>
         
         <div className="space-y-3">
-          {VIPs.map((emp: any) => (
-            <div key={emp.id} className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)]">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <div className="text-[12px] font-medium text-[var(--text)]">{emp.name}</div>
-                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Grade: {emp.level} | Comp-Ratio: {(emp.currentPay / emp.marketMid).toFixed(2)}</div>
+          {VIPs.map((emp: any, idx: number) => {
+            const quotes = [
+              "I have a formal offer from a competitor that's 40% higher. Match it or I walk.",
+              "My team carried the quarter. My base pay needs a structural adjustment.",
+              "I'm considering relocating to Dubai for a tax-free package.",
+              "The pre-IPO stress is high. I need my equity adjusted immediately."
+            ];
+            return (
+              <div key={emp.id} className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)]">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="text-[12px] font-medium text-[var(--text)]">{emp.name}</div>
+                    <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Grade: {emp.level} | Comp-Ratio: {(emp.currentPay / emp.marketMid).toFixed(2)}</div>
+                  </div>
+                  <input 
+                    type="number" step="50000"
+                    className={`bg-[var(--surface-alt)] border rounded px-2 py-1 text-[12px] w-28 text-[var(--text)] text-right font-mono ${remaining < 0 ? 'border-red-500/50' : 'border-[var(--border)]'}`}
+                    placeholder="₹ Allocation"
+                    value={decisions?.exceptions?.[emp.id] || ''}
+                    onChange={e => {
+                      const ex = { ...(decisions.exceptions || {}) };
+                      ex[emp.id] = Number(e.target.value);
+                      update('exceptions', ex);
+                    }}
+                  />
                 </div>
-                <input 
-                  type="number" step="50000"
-                  className={`bg-[var(--surface-alt)] border rounded px-2 py-1 text-[12px] w-28 text-[var(--text)] text-right font-mono ${remaining < 0 ? 'border-red-500/50' : 'border-[var(--border)]'}`}
-                  placeholder="₹ Allocation"
-                  value={decisions?.exceptions?.[emp.id] || ''}
-                  onChange={e => {
-                    const ex = { ...(decisions.exceptions || {}) };
-                    ex[emp.id] = Number(e.target.value);
-                    update('exceptions', ex);
-                  }}
-                />
+                <div className="text-[10px] text-amber-500/90 bg-amber-500/10 px-2 py-1.5 rounded italic">
+                  "{quotes[idx % quotes.length]}"
+                </div>
               </div>
-              <div className="text-[10px] text-amber-500/90 bg-amber-500/10 px-2 py-1.5 rounded italic">
-                "{emp.id === 'N5' ? 'I have an offer from Dubai. Match market P90 or I sign tomorrow.' : 'My team carried the quarter. My base needs adjusting.'}"
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

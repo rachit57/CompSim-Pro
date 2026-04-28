@@ -490,7 +490,12 @@ export default function GamePage() {
                       </div>
                       <div className="text-[var(--text-muted)] ml-2 border-l border-[var(--border)] pl-2 mt-1 py-0.5">
                         <span className="text-[9px] uppercase tracking-wider">Talks to:</span>{' '}
-                        <span className="text-[var(--text)] font-medium">{emp.connections.join(', ')}</span>
+                        <span className="text-[var(--text)] font-medium">
+                          {emp.connections.map((cId: string) => {
+                            const p = workforce.find((w: any) => w.id === cId);
+                            return p ? p.name.split(' ')[0] : cId;
+                          }).join(', ')}
+                        </span>
                       </div>
                     </div>
                   ))}
