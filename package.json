@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "install": "npm install",
-    "build:app": "cd app && npm run build",
+    "build:app": "cd app && NODE_OPTIONS='--max-old-space-size=4096' npm run build",
     "build": "npm run build:app",
     "start:app": "cd app && npm run start",
     "start": "npm run start:app",
