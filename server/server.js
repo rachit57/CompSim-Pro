@@ -4,6 +4,8 @@ const { Server } = require('socket.io');
 const Redis = require('ioredis');
 const cors = require('cors');
 require('dotenv').config();
+const { calculateCohortStats, generateNarrativeFeedback } = require('./analytics');
+const { sendStudentReport, sendProfessorSummary } = require('./mailer');
 
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL;
 let redis = null;
@@ -84,23 +86,26 @@ io.on('connection', (socket) => {
         session = {
           theme: 'hyper_scale',
           round: 1,
-          status: 'active', // Direct to active for simulation flow
+          isStarted: false,
+          isEnded: false,
           players: {},
-          personas: personas, // Add personas to session
-          workforce: workforce, // Add India workforce master file
+          personas: personas,
+          workforce: workforce,
           history: []
         };
       }
       
-      // Recover existing player state if they reconnect
-      const existingPlayerId = Object.keys(session.players).find(id => session.players[id].name === playerName);
-      
-      if (existingPlayerId) {
-        session.players[socket.id] = session.players[existingPlayerId];
-        if (existingPlayerId !== socket.id) {
-          delete session.players[existingPlayerId];
-        }
+      // STUDENT RE-JOINING LOGIC (via Email)
+      // Use email as the persistent key so reload doesn't reset progress
+      const playerEmail = playerName; // The input labeled "Name" will now be used as unique ID (Email)
+      let player = session.players[playerEmail];
+
+      if (player) {
+        // Recover existing state
+        player.socketId = socket.id;
+        console.log(`>>> Recovering state for ${playerEmail}`);
       } else {
+        // Create new player entry
         const clonedWorkforce = JSON.parse(JSON.stringify(workforce));
         
         // Randomize the Toxic Top Performer
@@ -126,63 +131,131 @@ io.on('connection', (socket) => {
             const bias = Math.random() > 0.5 ? 1 : -1;
             emp.managerRating = Math.max(1, Math.min(5, emp.performance + bias));
           }
-          // Swap performance with managerRating so the UI natively shows the biased rating
           emp.performance = emp.managerRating; 
         });
 
-        session.players[socket.id] = {
-          name: playerName,
-          role: role, 
+        player = {
+          email: playerEmail,
+          socketId: socket.id,
+          round: 1,
           score: null,
           politicalCapital: 100,
           shadowDebt: 0,
           isFired: false,
           isUnionStriking: false,
           decisions: [],
-          workforce: clonedWorkforce
+          workforce: clonedWorkforce,
+          metrics: { engagement: 0.9, turnover: 0.05, pValue: 0.05, roi: 0.5 }
         };
+        session.players[playerEmail] = player;
       }
 
       await saveSession(sessionCode, session);
-      console.log(`>>> Session Saved & Updating: ${sessionCode}`);
+      socket.email = playerEmail; // Attach identity
       io.to(sessionCode).emit('session_update', session);
     } catch (err) {
       console.error('!!! Join Session Error:', err);
     }
   });
 
-  socket.on('start_game', async ({ sessionCode, theme }) => {
+  // ── PROFESSOR / ADMIN CONTROLS ─────────────────────────────────────────────
+
+  socket.on('admin_login', ({ email, password }) => {
+    // Basic auth for MVP - should be in .env
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'prof@compsim.pro';
+    const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
+
+    if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
+      socket.emit('admin_auth_success', { email });
+    } else {
+      socket.emit('admin_auth_error', 'Invalid credentials');
+    }
+  });
+
+  socket.on('start_global_simulation', async ({ sessionCode }) => {
     let session = await getSession(sessionCode);
     if (!session) return;
     
-    session.status = 'active';
-    session.theme = theme || 'hyper_scale';
+    session.isStarted = true;
     session.round = 1;
     
     await saveSession(sessionCode, session);
+    io.to(sessionCode).emit('session_update', session);
     io.to(sessionCode).emit('game_started', session);
+  });
+
+  socket.on('advance_global_round', async ({ sessionCode }) => {
+    let session = await getSession(sessionCode);
+    if (!session || session.round >= 6) return;
+
+    session.round += 1;
+    // Reset submission status for all players for the new round
+    Object.values(session.players).forEach((p: any) => {
+      p.isSubmitted = false;
+      p.round = session.round; // Sync individual round to global
+    });
+    
+    await saveSession(sessionCode, session);
+    io.to(sessionCode).emit('session_update', session);
+  });
+
+  socket.on('end_simulation', async ({ sessionCode }) => {
+    let session = await getSession(sessionCode);
+    if (!session) return;
+
+    session.isEnded = true;
+    
+    // --- PHASE 2: ANALYTICS & MAILING ---
+    const players = Object.values(session.players);
+    const cohortStats = calculateCohortStats(players);
+    const leaderboard = [...players].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+
+    // 1. Send Individual Student Reports
+    for (const player of players) {
+      const feedback = generateNarrativeFeedback(player);
+      await sendStudentReport(player.email, player.email.split('@')[0], feedback);
+    }
+
+    // 2. Send Professor Summary
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'prof@compsim.pro';
+    await sendProfessorSummary(ADMIN_EMAIL, cohortStats, leaderboard);
+
+    await saveSession(sessionCode, session);
+    io.to(sessionCode).emit('session_update', session);
+    io.to(sessionCode).emit('game_ended', { leaderboard: leaderboard.map(p => ({ email: p.email, score: p.score })) });
+  });
+
+  socket.on('kick_student', async ({ sessionCode, studentEmail }) => {
+    let session = await getSession(sessionCode);
+    if (!session || !session.players[studentEmail]) return;
+
+    delete session.players[studentEmail];
+    await saveSession(sessionCode, session);
     io.to(sessionCode).emit('session_update', session);
   });
 
   socket.on('submit_decision', async ({ sessionCode, decisions }) => {
     let session = await getSession(sessionCode);
-    if (!session || !session.players[socket.id]) return;
+    if (!session || !socket.email || !session.players[socket.email]) return;
 
-    const player = session.players[socket.id];
+    const player = session.players[socket.email];
     player.decisions.push(decisions);
     
     // Process the round mathematically
-    const { hes, metrics, updatedWorkforce } = processRound(
+    const { hes, metrics, updatedWorkforce, politicalCapital, shadowDebt } = processRound(
       decisions, 
       player.workforce, 
-      decisions.round || session.round,
+      session.round,
       player
     );
 
-    // Apply the mutated workforce back to the player
+    // Update player state BUT STAY IN CURRENT ROUND
     player.workforce = updatedWorkforce;
     player.score = hes;
     player.metrics = metrics;
+    player.politicalCapital = politicalCapital;
+    player.shadowDebt = shadowDebt;
+    player.isSubmitted = true;
 
     await saveSession(sessionCode, session);
     io.to(sessionCode).emit('session_update', session);
@@ -260,16 +333,10 @@ io.on('connection', (socket) => {
     
     if (sessionCode) {
       const session = await getSession(sessionCode);
-      if (session && session.players[socket.id]) {
-        delete session.players[socket.id];
+      if (session) {
+        // We don't delete players on disconnect anymore to ensure persistence via Email
+        // Only cleanup the socket mapping
         delete socketToSession[socket.id];
-        
-        if (Object.keys(session.players).length === 0) {
-          await redis.del(`session:${sessionCode}`);
-        } else {
-          await saveSession(sessionCode, session);
-          io.to(sessionCode).emit('session_update', session);
-        }
       }
     }
   });

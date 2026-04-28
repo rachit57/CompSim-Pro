@@ -26,6 +26,8 @@ import {
   Moon,
   AlertTriangle,
   RotateCcw,
+  Lock,
+  Trophy,
 } from 'lucide-react';
 import { useTheme } from '@/lib/useTheme';
 import { RoundMechanics } from '@/components/RoundMechanics';
@@ -135,9 +137,46 @@ export default function GamePage() {
     );
   }
 
-  const round: number   = clientRound ?? sessionData.round ?? 1;
-  const myId            = socket.id as string;
-  const myPlayer        = sessionData.players?.[myId];
+  if (!sessionData.isStarted) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 border border-indigo-500/20">
+          <Lock className="w-8 h-8 text-indigo-500 animate-pulse" />
+        </div>
+        <h1 className="text-2xl font-bold text-[var(--text)] mb-3 tracking-tight">Simulation Locked</h1>
+        <p className="max-w-md text-[var(--text-muted)] text-sm leading-relaxed mb-8">
+          The Professor has not started the session yet. Please stay on this screen. 
+          The simulation will begin automatically once the briefing is complete.
+        </p>
+        <div className="flex items-center gap-3 text-[10px] font-bold text-indigo-500 uppercase tracking-[0.2em] bg-indigo-500/5 px-4 py-2 rounded-full border border-indigo-500/10">
+          <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" />
+          Connected as {playerName}
+        </div>
+      </div>
+    );
+  }
+
+  if (sessionData.isEnded) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-8 border border-emerald-500/20">
+          <Trophy className="w-8 h-8 text-emerald-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-[var(--text)] mb-3 tracking-tight">Simulation Complete</h1>
+        <p className="max-w-md text-[var(--text-muted)] text-sm leading-relaxed mb-8">
+          The session has been officially closed by the Professor. 
+          Your personalized performance report and HES breakdown are being generated and will be sent to <strong>{playerName}</strong> shortly.
+        </p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 w-full max-w-sm">
+          <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest mb-1 font-bold">Final HES Score</div>
+          <div className="text-5xl font-bold text-white font-mono">{sessionData.players?.[playerName]?.score ?? '---'}</div>
+        </div>
+      </div>
+    );
+  }
+
+  const round: number   = sessionData.round ?? 1;
+  const myPlayer        = sessionData.players?.[playerName]; // playerName is the email
   const metrics         = myPlayer?.metrics ?? {
     budgetUtil: 0, turnover: 0.08, engagement: 0.75, pValue: 0.082, roi: 0,
   };
@@ -389,19 +428,6 @@ export default function GamePage() {
             title="Toggle Theme"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to RESET the entire simulation? All progress for all players in this session will be lost.')) {
-                socket.emit('reset_session', { sessionCode });
-                window.location.reload();
-              }
-            }}
-            className="text-red-500/60 hover:text-red-500 transition-colors p-1"
-            title="Reset Simulation"
-          >
-            <RotateCcw className="w-4 h-4" />
           </button>
 
           <div className="text-right">
