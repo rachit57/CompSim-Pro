@@ -184,7 +184,9 @@ export default function GamePage() {
       ];
       const randomDistractor = distractors[(emp.id.charCodeAt(0) + emp.id.charCodeAt(1) + round) % distractors.length];
 
-      if (cr < 0.85 && emp.performance >= 4) {
+      if (emp.isToxic) {
+        quote = `Honestly, I carry this entire team. The others are dragging their feet, and I have to constantly fix their mistakes just so we hit our targets. It's exhausting being the only competent one here.`;
+      } else if (cr < 0.85 && emp.performance >= 4) {
         quote = `I'm delivering top ratings, but my pay is severely below market (${(cr*100).toFixed(0)}% of median). I need a structural adjustment, not just a standard merit hike.`;
       } else if (cr < 0.85) {
         quote = `My cost of living has gone up, but my pay hasn't kept pace. I'm struggling with the current band.`;
@@ -202,6 +204,37 @@ export default function GamePage() {
     // Look up name/role from workforce data
     setPulse({ name: emp.name, role: emp.role, quote });
   };
+
+  const handleAudit = (id: string) => {
+    socket.emit('hr_audit', { sessionCode, targetId: id });
+  };
+
+  const handleTerminate = (id: string) => {
+    if (confirm('Are you sure you want to fire this employee? This will cost 15 Political Capital.')) {
+      socket.emit('fire_employee', { sessionCode, targetId: id });
+      setPulse(null); // Close interview modal if open
+    }
+  };
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE: FIRED (GAME OVER)
+  // ════════════════════════════════════════════════════════════════════════
+
+  if (myPlayer?.isFired) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-red-500 flex flex-col items-center justify-center p-6 text-center">
+        <AlertTriangle className="w-20 h-20 mb-6 text-red-600 animate-pulse" />
+        <h1 className="text-5xl font-bold mb-4 uppercase tracking-widest text-red-500">You Are Fired</h1>
+        <p className="max-w-xl text-red-400/80 mb-8 text-lg">
+          You have exhausted all Political Capital with the Board of Directors. 
+          Your failure to balance budget efficiency with talent retention and corporate governance has led to your immediate termination.
+        </p>
+        <button onClick={() => window.location.reload()} className="px-8 py-3 bg-red-900/50 hover:bg-red-900 text-red-200 rounded border border-red-500/30 transition-colors uppercase tracking-widest text-sm font-semibold">
+          Leave Building
+        </button>
+      </div>
+    );
+  }
 
   // ════════════════════════════════════════════════════════════════════════
   //  PHASE: ONBOARDING
@@ -352,6 +385,18 @@ export default function GamePage() {
         </div>
         <div className="hidden sm:flex gap-5 text-[10px] font-mono text-[var(--text-muted)]">
           <span>
+            Capital:&nbsp;
+            <span className={(myPlayer?.politicalCapital || 0) < 30 ? 'text-red-500' : 'text-emerald-600'}>
+              {myPlayer?.politicalCapital || 100}
+            </span>
+          </span>
+          <span>
+            Shadow Debt:&nbsp;
+            <span className={(myPlayer?.shadowDebt || 0) > 0 ? 'text-amber-500' : 'text-[var(--text-muted)]'}>
+              {fmtLPA(myPlayer?.shadowDebt || 0)}
+            </span>
+          </span>
+          <span>
             Engagement:&nbsp;
             <span className={metrics.engagement > 0.7 ? 'text-emerald-600' : 'text-red-500'}>
               {fmtPct(metrics.engagement)}
@@ -361,12 +406,6 @@ export default function GamePage() {
             Turnover:&nbsp;
             <span className={metrics.turnover < 0.08 ? 'text-emerald-600' : 'text-red-500'}>
               {fmtPct(metrics.turnover)}
-            </span>
-          </span>
-          <span>
-            Parity p:&nbsp;
-            <span className={metrics.pValue > 0.05 ? 'text-emerald-600' : 'text-red-500'}>
-              {metrics.pValue?.toFixed(3) ?? '-'}
             </span>
           </span>
         </div>
@@ -396,7 +435,21 @@ export default function GamePage() {
 
         {/* ── SITUATION ─────────────────────────────────────────────────── */}
         {tab === 'situation' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in">
+          <div className="flex flex-col gap-8 animate-in">
+            {myPlayer?.isUnionStriking && (
+              <div className="bg-red-950/40 border border-red-500/50 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <AlertTriangle className="w-8 h-8 text-red-500 shrink-0" />
+                  <div>
+                    <h2 className="text-lg font-bold text-red-500 uppercase tracking-widest mb-1">Union Strike in Progress</h2>
+                    <p className="text-[13px] text-red-400/90 mb-3">
+                      Tier 3 & Tier 4 employees have unionized and are currently on strike due to severe pay inequity (Average Comp-Ratio dropped below 80%). All operational performance (ROI) has been frozen to 0. You must address base pay immediately.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
             {/* Current round story */}
             <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
@@ -470,6 +523,7 @@ export default function GamePage() {
               </section>
             </div>
           </div>
+          </div>
         )}
 
         {/* ── WORKFORCE & GRAPEVINE ─────────────────────────────────────── */}
@@ -524,7 +578,7 @@ export default function GamePage() {
                       <th className="text-left px-6 py-3">Employee</th>
                       <th className="text-left px-4 py-3">Grade</th>
                       <th className="text-left px-4 py-3">City · Tier</th>
-                      <th className="text-center px-4 py-3">Perf</th>
+                      <th className="text-center px-4 py-3">Rating</th>
                       <th className="text-right px-4 py-3">CTC</th>
                       <th className="text-right px-4 py-3">Comp-Ratio</th>
                       <th className="text-right px-6 py-3">Actions</th>
@@ -550,7 +604,7 @@ export default function GamePage() {
                             <div className="text-[12px] text-[var(--text-muted)]">{emp.city}</div>
                             <div className="text-[10px] text-[var(--text-muted)]">Tier {emp.tier}</div>
                           </td>
-                          <td className="px-4 py-3.5 text-center">
+                          <td className="px-4 py-3.5 text-center flex flex-col items-center gap-1">
                             <span className={`text-[12px] font-semibold font-mono ${
                               emp.performance >= 4
                                 ? 'text-emerald-400'
@@ -558,8 +612,17 @@ export default function GamePage() {
                                 ? 'text-[var(--text-muted)]'
                                 : 'text-red-400'
                             }`}>
-                              {emp.performance}
+                              {emp.performance} {emp.audited ? '(True)' : '(Mgr)'}
                             </span>
+                            {!emp.audited && (
+                              <button
+                                onClick={() => handleAudit(emp.id)}
+                                className="text-[9px] text-indigo-400 border border-indigo-500/30 rounded px-1.5 py-0.5 hover:bg-indigo-500/10"
+                                title="Costs 5 Political Capital"
+                              >
+                                Audit (-5 Cap)
+                              </button>
+                            )}
                           </td>
                           <td className="px-4 py-3.5 text-right font-mono text-[12px] text-[var(--text)]">
                             {fmtLPA(emp.currentPay)}
@@ -586,6 +649,13 @@ export default function GamePage() {
                                 }`}
                               >
                                 {wasInterviewed ? 'Reviewed' : '1-on-1'}
+                              </button>
+                              <button
+                                onClick={() => handleTerminate(emp.id)}
+                                className="px-2.5 py-1.5 rounded text-[10px] font-medium transition-colors text-red-500 border border-red-500/30 hover:bg-red-500/10"
+                                title="Terminate Employment (-15 Capital)"
+                              >
+                                Fire
                               </button>
                               <button
                                 id={`promote-${emp.id}`}

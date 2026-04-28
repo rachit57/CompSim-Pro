@@ -101,12 +101,39 @@ io.on('connection', (socket) => {
           delete session.players[existingPlayerId];
         }
       } else {
+        const clonedWorkforce = JSON.parse(JSON.stringify(workforce));
+        
+        // Randomize the Toxic Top Performer
+        const topPerformers = clonedWorkforce.filter(w => w.performance === 5);
+        if (topPerformers.length > 0) {
+          const toxicEmp = topPerformers[Math.floor(Math.random() * topPerformers.length)];
+          toxicEmp.isToxic = true;
+        }
+
+        // Apply Fog of War (Manager Ratings)
+        clonedWorkforce.forEach(emp => {
+          emp.truePerformance = emp.performance;
+          emp.managerRating = emp.performance;
+          
+          // 25% chance manager is biased (either +/- 1)
+          if (Math.random() < 0.25) {
+            const bias = Math.random() > 0.5 ? 1 : -1;
+            emp.managerRating = Math.max(1, Math.min(5, emp.performance + bias));
+          }
+          // Swap performance with managerRating so the UI natively shows the biased rating
+          emp.performance = emp.managerRating; 
+        });
+
         session.players[socket.id] = {
           name: playerName,
           role: role, 
           score: null,
+          politicalCapital: 100,
+          shadowDebt: 0,
+          isFired: false,
+          isUnionStriking: false,
           decisions: [],
-          workforce: JSON.parse(JSON.stringify(workforce)) // Deep clone individual workforce
+          workforce: clonedWorkforce
         };
       }
 
@@ -142,7 +169,8 @@ io.on('connection', (socket) => {
     const { hes, metrics, updatedWorkforce } = processRound(
       decisions, 
       player.workforce, 
-      decisions.round || session.round
+      decisions.round || session.round,
+      player
     );
 
     // Apply the mutated workforce back to the player
@@ -177,6 +205,35 @@ io.on('connection', (socket) => {
 
     await saveSession(sessionCode, session);
     io.to(sessionCode).emit('round_advanced', session);
+    io.to(sessionCode).emit('session_update', session);
+  });
+
+  socket.on('hr_audit', async ({ sessionCode, targetId }) => {
+    let session = await getSession(sessionCode);
+    if (!session || !session.players[socket.id]) return;
+    const player = session.players[socket.id];
+    
+    if (player.politicalCapital >= 5) {
+      player.politicalCapital -= 5;
+      const emp = player.workforce.find(w => w.id === targetId);
+      if (emp) {
+        emp.performance = emp.truePerformance; // Reveal truth
+        emp.audited = true;
+      }
+      await saveSession(sessionCode, session);
+      io.to(sessionCode).emit('session_update', session);
+    }
+  });
+
+  socket.on('fire_employee', async ({ sessionCode, targetId }) => {
+    let session = await getSession(sessionCode);
+    if (!session || !session.players[socket.id]) return;
+    const player = session.players[socket.id];
+    
+    player.politicalCapital -= 15; // Severance/Political cost
+    player.workforce = player.workforce.filter(w => w.id !== targetId);
+    
+    await saveSession(sessionCode, session);
     io.to(sessionCode).emit('session_update', session);
   });
 
