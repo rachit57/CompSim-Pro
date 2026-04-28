@@ -153,8 +153,21 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
     }
   }
 
-  if (sessionState && shadowDebtAdded > 0) {
-    sessionState.shadowDebt += shadowDebtAdded;
+  // --- EXECUTIVE LEVER: Severance & Benefits ---
+  if (sessionState) {
+    if (decisions.severancePolicy === 'Platinum') {
+      sessionState.politicalCapital = Math.min(100, sessionState.politicalCapital + 5);
+      totalBudgetUsed *= 1.15; // 15% increase in base TCOW
+    }
+
+    if (decisions.benefitsTier === 'Plus') {
+      totalPerformanceValue *= 1.05;
+      totalBudgetUsed *= 1.08;
+    } else if (decisions.benefitsTier === 'Elite') {
+      totalPerformanceValue *= 1.12;
+      totalBudgetUsed *= 1.15;
+      sessionState.shadowDebt += 20; // Strategic benefits compound as long-term debt
+    }
   }
 
   const deptStats = {};
@@ -163,6 +176,15 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
 
   workforce.forEach(emp => {
     if (!deptStats[emp.dept]) deptStats[emp.dept] = { totalCR: 0, count: 0 };
+    
+    // Apply Departmental Merit Multiplier
+    if (decisions.deptMults && decisions.deptMults[emp.dept]) {
+      const merit = (decisions.meritPool || 0.05) * decisions.deptMults[emp.dept];
+      emp.currentPay *= (1 + merit);
+    } else if (decisions.meritPool) {
+      emp.currentPay *= (1 + decisions.meritPool);
+    }
+
     const cr = calculateCompRatio(emp.currentPay, emp.marketMid);
     deptStats[emp.dept].totalCR += cr;
     deptStats[emp.dept].count += 1;
@@ -175,10 +197,22 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
   });
 
   // --- ENTROPY MECHANIC: Unionization Risk ---
-  let isUnionStriking = false;
-  if (lowTierCount > 0 && (lowTierCRSum / lowTierCount) < 0.80) {
-    isUnionStriking = true;
-    if (sessionState) sessionState.isUnionStriking = true;
+  let isUnionStriking = sessionState ? (sessionState.isUnionStriking || false) : false;
+  
+  if (round >= 3 && !isUnionStriking) {
+    if (lowTierCount > 0 && (lowTierCRSum / lowTierCount) < 0.80) {
+      isUnionStriking = true;
+      if (sessionState) sessionState.isUnionStriking = true;
+    }
+  }
+
+  // Check if player has paid a settlement premium to resolve strike
+  if (isUnionStriking && decisions.settlementPremium === 'high') {
+    isUnionStriking = false;
+    if (sessionState) {
+      sessionState.isUnionStriking = false;
+      sessionState.politicalCapital -= 10; // Settling costs capital
+    }
   }
 
   let employeeOutcomes = [];
@@ -207,6 +241,11 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
 
     // Attrition Risk is inversely proportional to Utility
     let attritionRisk = Math.max(0, 1.2 - utilityUe);
+
+    // Apply Severance Policy engagement penalty
+    if (decisions.severancePolicy === 'Barebones') {
+      attritionRisk += 0.10;
+    }
 
     attritionRisk = Math.max(0.01, Math.min(0.95, attritionRisk));
 

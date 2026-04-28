@@ -59,3 +59,31 @@ The simulation uses a directed graph to calculate pay parity:
 3. If an employee's Comp-Ratio is $< 0.90$ AND their `peerAverageRatio` is $> 1.10$, it triggers a `GrapevinePenalty`.
 4. This penalty directly forces the employee into the `AttritionRisk` pool, meaning they will randomly quit at the end of the round.
 5. **Takeaway:** Pay transparency is simulated dynamically. You cannot hide underpaying a high performer if they are networked with overpaid low performers.
+
+---
+
+## 4. The Entropy Engine (Executive Tier Upgrades)
+
+To make the simulation non-deterministic and challenging for high-performing students, the **Entropy Engine** adds stochastic modifiers:
+
+### A. The Fog of War (Manager Bias)
+* **Mechanic:** Exactly 25% of the workforce is assigned a `managerRating` that differs from their `truePerformance` (±1 bias). 
+* **Impact:** Students who blindly pay based on the UI dashboard may be rewarding low performers or ignoring high performers. 
+* **The Fix:** Students must spend **5 Political Capital** to conduct an "HR Audit" and reveal the ground truth for a specific employee.
+
+### B. Political Capital & Shadow Debt
+* **Political Capital (Starts at 100):** A finite resource. Firing employees (-15) or ignoring board mandates drains it. If it hits 0, the player is **FIRED** and the game ends.
+* **Shadow Debt:** Discretionary cash raises (Round 1/6) or aggressive benefit tiers (Elite) compound as "Shadow Debt." This acts as a permanent drag on the final HES score, simulating long-term fiscal irresponsibility.
+
+### C. Persistent Union Strike (Round 3+)
+* **Trigger:** If the average Comp-Ratio of Tier 3/4 employees (P1/P2 levels) falls below **0.80** starting Round 3, a Union Strike is triggered.
+* **Impact:** The ROI for all subsequent rounds becomes **0** until the strike is resolved.
+* **Resolution:** Students must select a "Platinum Settlement" in the Round 3+ decisions, costing **10 Political Capital**.
+
+### D. Executive Levers (Complexity)
+* **Severance Policy:** Barebones (low cost, high attrition), Standard, or Platinum (high cost, high political capital).
+* **Benefits Tier:** Elite benefits boost ROI but significantly increase the IPO budget burn and Shadow Debt.
+* **Departmental Merit Multipliers:** Students must now manage different merit pools for Engineering, Sales, Product, and Ops, rather than a single flat percentage.
+
+---
+*Note: A score of 90+ is mathematically improbable in the Entropy Engine without near-perfect allocation of Political Capital and perfect identification of Toxic/Top performers.*

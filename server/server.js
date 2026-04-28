@@ -110,13 +110,19 @@ io.on('connection', (socket) => {
           toxicEmp.isToxic = true;
         }
 
-        // Apply Fog of War (Manager Ratings)
-        clonedWorkforce.forEach(emp => {
+        // Apply Fog of War (Manager Ratings) to exactly 25% of employees
+        const totalEmp = clonedWorkforce.length;
+        const biasedCount = Math.floor(totalEmp * 0.25);
+        const biasedIndices = new Set();
+        while (biasedIndices.size < biasedCount) {
+          biasedIndices.add(Math.floor(Math.random() * totalEmp));
+        }
+
+        clonedWorkforce.forEach((emp, index) => {
           emp.truePerformance = emp.performance;
           emp.managerRating = emp.performance;
           
-          // 25% chance manager is biased (either +/- 1)
-          if (Math.random() < 0.25) {
+          if (biasedIndices.has(index)) {
             const bias = Math.random() > 0.5 ? 1 : -1;
             emp.managerRating = Math.max(1, Math.min(5, emp.performance + bias));
           }
