@@ -13,5 +13,8 @@
   "workspaces": [
     "app",
     "server"
-  ]
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }
