@@ -149,7 +149,7 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
 
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)]">
           <label className="block text-[12px] font-medium text-[var(--text)] mb-1">Departmental Merit Multipliers</label>
-          <p className="text-[9px] text-amber-500/80 mb-3 italic">⚠️ Warning: Cross-departmental disparity > 2% triggers Envy resentment.</p>
+          <p className="text-[9px] text-amber-500/80 mb-3 italic">⚠️ Warning: Cross-departmental disparity &gt; 2% triggers Envy resentment.</p>
           <div className="grid grid-cols-2 gap-4">
             {['Engineering', 'Sales', 'Product', 'Ops'].map(dept => (
               <div key={dept} className="flex flex-col">
