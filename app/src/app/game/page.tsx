@@ -25,6 +25,7 @@ import {
   Sun,
   Moon,
   AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 import { useTheme } from '@/lib/useTheme';
 import { RoundMechanics } from '@/components/RoundMechanics';
@@ -388,6 +389,19 @@ export default function GamePage() {
             title="Toggle Theme"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
+          <button
+            onClick={() => {
+              if (confirm('Are you sure you want to RESET the entire simulation? All progress for all players in this session will be lost.')) {
+                socket.emit('reset_session', { sessionCode });
+                window.location.reload();
+              }
+            }}
+            className="text-red-500/60 hover:text-red-500 transition-colors p-1"
+            title="Reset Simulation"
+          >
+            <RotateCcw className="w-4 h-4" />
           </button>
 
           <div className="text-right">
