@@ -183,7 +183,7 @@ io.on('connection', (socket) => {
 
     session.round += 1;
     // Reset submission status for all players for the new round
-    Object.values(session.players).forEach((p: any) => {
+    Object.values(session.players).forEach((p) => {
       p.isSubmitted = false;
       p.round = session.round; // Sync individual round to global
     });
