@@ -153,20 +153,26 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
     }
   }
 
-  // --- EXECUTIVE LEVER: Severance & Benefits ---
+  // --- EXECUTIVE LEVER: Non-Obvious Trade-offs ---
   if (sessionState) {
-    if (decisions.severancePolicy === 'Platinum') {
-      sessionState.politicalCapital = Math.min(100, sessionState.politicalCapital + 5);
-      totalBudgetUsed *= 1.15; // 15% increase in base TCOW
+    // Severance Policy: Cost-cutting vs. Culture
+    if (decisions.severancePolicy === 'Barebones') {
+      sessionState.politicalCapital = Math.min(100, sessionState.politicalCapital + 10); // Board loves the lean approach
+      // Engagement hit handled in the outcomes loop below
+    } else if (decisions.severancePolicy === 'Platinum') {
+      sessionState.politicalCapital -= 15; // Board views this as fiscal leakage
+      totalBudgetUsed *= 1.25; 
     }
 
-    if (decisions.benefitsTier === 'Plus') {
-      totalPerformanceValue *= 1.05;
-      totalBudgetUsed *= 1.08;
+    // Benefits Tier: Short-term ROI vs. Long-term Liability
+    if (decisions.benefitsTier === 'Core') {
+      totalPerformanceValue *= 1.10; // Leaner teams work harder initially
+      // Skill decay multiplier handled below
     } else if (decisions.benefitsTier === 'Elite') {
-      totalPerformanceValue *= 1.12;
-      totalBudgetUsed *= 1.15;
-      sessionState.shadowDebt += 20; // Strategic benefits compound as long-term debt
+      totalPerformanceValue *= 1.15;
+      totalBudgetUsed *= 1.20;
+      sessionState.shadowDebt += 40; 
+      // Future marketMid inflation logic could be added in later rounds
     }
   }
 
@@ -174,16 +180,19 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
   let lowTierCRSum = 0;
   let lowTierCount = 0;
 
+  // Track department merit delta for Envy logic
+  const deptMerits = {};
+
   workforce.forEach(emp => {
     if (!deptStats[emp.dept]) deptStats[emp.dept] = { totalCR: 0, count: 0 };
     
     // Apply Departmental Merit Multiplier
+    let merit = decisions.meritPool || 0.05;
     if (decisions.deptMults && decisions.deptMults[emp.dept]) {
-      const merit = (decisions.meritPool || 0.05) * decisions.deptMults[emp.dept];
-      emp.currentPay *= (1 + merit);
-    } else if (decisions.meritPool) {
-      emp.currentPay *= (1 + decisions.meritPool);
+      merit *= decisions.deptMults[emp.dept];
     }
+    deptMerits[emp.dept] = merit;
+    emp.currentPay *= (1 + merit);
 
     const cr = calculateCompRatio(emp.currentPay, emp.marketMid);
     deptStats[emp.dept].totalCR += cr;
@@ -207,11 +216,20 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
   }
 
   // Check if player has paid a settlement premium to resolve strike
-  if (isUnionStriking && decisions.settlementPremium === 'high') {
-    isUnionStriking = false;
-    if (sessionState) {
-      sessionState.isUnionStriking = false;
-      sessionState.politicalCapital -= 10; // Settling costs capital
+  if (isUnionStriking) {
+    if (decisions.settlementPremium === 'high') {
+      isUnionStriking = false;
+      if (sessionState) {
+        sessionState.isUnionStriking = false;
+        sessionState.politicalCapital -= 20; // Board HATES "giving in"
+        sessionState.shadowDebt += 50; // New contract is a massive future liability
+      }
+    } else if (decisions.settlementPremium === 'suppress') {
+      isUnionStriking = false; // ROI restored but toxic flags added
+      if (sessionState) {
+        sessionState.isUnionStriking = false;
+        sessionState.politicalCapital -= 30; // High political risk
+      }
     }
   }
 
@@ -226,6 +244,14 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
     totalEquityDistance += equityGap;
     
     // ENTROPY MECHANIC: Utility Function (Ue)
+    // ENTROPY MECHANIC: Cross-Department Envy
+    // If your department merit is lower than any other department by > 2%, you get Envy
+    Object.values(deptMerits).forEach(m => {
+      if (m > (deptMerits[emp.dept] || 0) + 0.02) {
+        emp.utilityUe -= 0.15; // Resentment for cross-dept disparity
+      }
+    });
+
     const alphaPay = cr;
     const betaEquity = (emp.lti || 0) * 2;
     const gammaGrowth = emp.projectedBonusMultiplier ? emp.projectedBonusMultiplier * 0.2 : 0;
@@ -239,12 +265,17 @@ function processRound(decisions, rawWorkforce, round, sessionState) {
       emp.truePerformance = Math.max(1, emp.truePerformance - 0.5);
     }
 
+    // --- ENTROPY MECHANIC: Skill Decay via Benefits ---
+    if (decisions.benefitsTier === 'Core' && emp.truePerformance > 1) {
+      emp.truePerformance *= 0.90; // 10% decay per round due to poor support systems
+    }
+
     // Attrition Risk is inversely proportional to Utility
     let attritionRisk = Math.max(0, 1.2 - utilityUe);
 
     // Apply Severance Policy engagement penalty
     if (decisions.severancePolicy === 'Barebones') {
-      attritionRisk += 0.10;
+      attritionRisk += 0.15; // Significant cultural risk
     }
 
     attritionRisk = Math.max(0.01, Math.min(0.95, attritionRisk));

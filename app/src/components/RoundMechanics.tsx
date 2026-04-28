@@ -36,15 +36,15 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
     return (
       <div className="space-y-5">
         <h2 className="text-[13px] font-semibold text-[var(--text)]">Strategic Entry & Slotting</h2>
-        <LeverCard id="severance" label="Corporate Severance Policy" description="Determines the baseline exit package for terminated employees. Affects Political Capital burn rate and attrition sentiment." displayValue={decisions.severancePolicy || 'Standard'}>
+        <LeverCard id="severance" label="Corporate Severance Policy" description="Choice: Barebones (Wins Board approval +10 Capital, but causes -15% Envy & Engagement risk) vs Platinum (Wins Culture, but Board penalizes 'Soft' leadership -15 Capital)." displayValue={decisions.severancePolicy || 'Standard'}>
           <select 
             className="bg-[var(--surface-alt)] border border-[var(--border)] text-[var(--text)] text-[12px] rounded p-2 w-full"
             value={decisions.severancePolicy || 'Standard'}
             onChange={e => update('severancePolicy', e.target.value)}
           >
-            <option value="Barebones">Barebones (No cost, -10 Engagement)</option>
+            <option value="Barebones">Barebones (Lean/Aggressive)</option>
             <option value="Standard">Standard (Market median)</option>
-            <option value="Platinum">Platinum (+5 Pol. Capital, +15% TCOW)</option>
+            <option value="Platinum">Platinum (Employee-First)</option>
           </select>
         </LeverCard>
 
@@ -80,15 +80,15 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
     return (
       <div className="space-y-5">
         <h2 className="text-[13px] font-semibold text-[var(--text)]">Geo-Tiering & Executive Benefits</h2>
-        <LeverCard id="benefits" label="Wellness & Benefits Tier" description="Strategic health and lifestyle package. High tiers increase ROI but drain the IPO runway." displayValue={decisions.benefitsTier || 'Core'}>
+        <LeverCard id="benefits" label="Wellness & Benefits Tier" description="Choice: Core (Lean ops +10% short-term ROI, but causes 10% Skill Decay) vs Elite (Max retention, but triggers +40 Shadow Debt)." displayValue={decisions.benefitsTier || 'Core'}>
           <select 
             className="bg-[var(--surface-alt)] border border-[var(--border)] text-[var(--text)] text-[12px] rounded p-2 w-full"
             value={decisions.benefitsTier || 'Core'}
             onChange={e => update('benefitsTier', e.target.value)}
           >
-            <option value="Core">Core (Minimal coverage)</option>
-            <option value="Plus">Plus (+5% ROI, +8% TCOW)</option>
-            <option value="Elite">Elite (+12% ROI, +15% TCOW, +20 Shadow Debt)</option>
+            <option value="Core">Core (Efficiency Focus)</option>
+            <option value="Plus">Plus (Balanced)</option>
+            <option value="Elite">Elite (Retention Focus)</option>
           </select>
         </LeverCard>
 
@@ -132,22 +132,24 @@ export function RoundMechanics({ round, decisions, setDecisions, workforce }: an
               ⚠️ UNION STRIKE IN PROGRESS
             </h3>
             <p className="text-[10px] text-red-400/80 mb-3 leading-relaxed">
-              Tier 3/4 employees have halted operations. ROI is currently 0. Select a resolution strategy.
+              Tier 3/4 employees have halted operations. ROI is currently 0. Every choice has a permanent consequence.
             </p>
             <select 
               className="bg-black/40 border border-red-500/30 text-red-200 text-[11px] rounded p-2 w-full outline-none focus:border-red-500"
               value={decisions.settlementPremium || 'none'}
               onChange={e => update('settlementPremium', e.target.value)}
             >
-              <option value="none">Ignore (Strike persists, 0 ROI)</option>
-              <option value="low">Negotiate (-5 Pol. Capital, 50% ROI restored)</option>
-              <option value="high">Platinum Settlement (-10 Pol. Capital, Strike Ends)</option>
+              <option value="none">Hold the Line (Strike persists, Board approves, ROI = 0)</option>
+              <option value="low">Negotiate (50% ROI restored, -5 Pol. Capital)</option>
+              <option value="high">Platinum Settlement (Strike ends, -20 Pol. Capital, +50 Shadow Debt)</option>
+              <option value="suppress">Suppress (ROI restored, -30 Pol. Capital, Adds Toxic nodes)</option>
             </select>
           </div>
         )}
 
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)]">
-          <label className="block text-[12px] font-medium text-[var(--text)] mb-3">Departmental Merit Multipliers</label>
+          <label className="block text-[12px] font-medium text-[var(--text)] mb-1">Departmental Merit Multipliers</label>
+          <p className="text-[9px] text-amber-500/80 mb-3 italic">⚠️ Warning: Cross-departmental disparity > 2% triggers Envy resentment.</p>
           <div className="grid grid-cols-2 gap-4">
             {['Engineering', 'Sales', 'Product', 'Ops'].map(dept => (
               <div key={dept} className="flex flex-col">
