@@ -242,13 +242,19 @@ io.on('connection', (socket) => {
       player
     );
 
-    // Update player state BUT STAY IN CURRENT ROUND
+    // Update player state and ADVANCE SELF-PACED ROUND
     player.workforce = updatedWorkforce;
     player.score = hes;
     player.metrics = metrics;
     player.politicalCapital = politicalCapital;
     player.shadowDebt = shadowDebt;
-    player.isSubmitted = true;
+    
+    if (player.round < 6) {
+      player.round += 1;
+      player.isSubmitted = false; // Ready for next round briefing
+    } else {
+      player.isSubmitted = true; // Final round complete
+    }
 
     await saveSession(sessionCode, session);
     io.to(sessionCode).emit('session_update', session);

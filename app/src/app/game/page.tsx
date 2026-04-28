@@ -175,8 +175,8 @@ export default function GamePage() {
     );
   }
 
-  const round: number   = sessionData.round ?? 1;
   const myPlayer        = sessionData.players?.[playerName]; // playerName is the email
+  const round: number   = myPlayer?.round ?? sessionData.round ?? 1;
   const metrics         = myPlayer?.metrics ?? {
     budgetUtil: 0, turnover: 0.08, engagement: 0.75, pValue: 0.082, roi: 0,
   };
