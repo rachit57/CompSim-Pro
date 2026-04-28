@@ -72,6 +72,11 @@ export default function GamePage() {
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const { theme, toggle: toggleTheme } = useTheme();
 
+  // ENTROPY ENGINE: Headhunter Poaching
+  const [poachTargets, setPoachTargets] = useState<any[]>([]);
+  const [poachHandled, setPoachHandled] = useState(false);
+  const [counterOffers, setCounterOffers] = useState<Record<string, number>>({});
+
   // ── SOCKET SETUP ──────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -139,9 +144,29 @@ export default function GamePage() {
   // ── SUBMIT ────────────────────────────────────────────────────────────────
 
   const handleSubmit = () => {
+    // ENTROPY ENGINE: Adversarial Headhunter Intercept
+    // 40% chance in rounds 2, 3, 4 to trigger a poach event
+    if (!poachHandled && round > 1 && round < 5 && Math.random() < 0.40) {
+      const sortedVulnerable = [...workforce]
+        .filter(w => w.performance >= 4 && (w.currentPay / w.marketMid) < 0.90)
+        .sort((a, b) => (a.currentPay/a.marketMid) - (b.currentPay/b.marketMid));
+      
+      if (sortedVulnerable.length > 0) {
+        setPoachTargets(sortedVulnerable.slice(0, 3));
+        return; // Intercept submit!
+      }
+    }
+
+    const finalDecisions = { 
+      ...decisions, 
+      promotions: promoted, 
+      round,
+      exceptions: { ...(decisions.exceptions || {}), ...counterOffers }
+    };
+
     socket.emit('submit_decision', {
       sessionCode,
-      decisions: { ...decisions, promotions: promoted, round },
+      decisions: finalDecisions,
     });
     setSubmitted(true);
     
@@ -152,11 +177,19 @@ export default function GamePage() {
       setDecisions(DEFAULT_DECISIONS);
       setPromoted([]);
       setInterviewed([]);
+      setPoachHandled(false);
+      setCounterOffers({});
       setSubmitted(false);
     } else {
       setSubmitted(true);
       setTimeout(() => setPhase({ type: 'end' }), 1400);
     }
+  };
+
+  const handlePoachConfirm = () => {
+    setPoachHandled(true);
+    setPoachTargets([]);
+    setTimeout(handleSubmit, 100); // Re-trigger submit bypassing the intercept
   };
 
   // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -873,6 +906,51 @@ export default function GamePage() {
               className="w-full py-2.5 text-[12px] text-[var(--text-muted)] border border-[var(--border)] rounded-lg hover:border-[var(--border)] hover:text-[var(--text)] transition-colors"
             >
               Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Headhunter Poach Modal */}
+      {poachTargets.length > 0 && !poachHandled && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-2xl bg-neutral-950 border border-red-500/50 rounded-2xl p-8 shadow-2xl animate-in">
+            <div className="flex items-center gap-3 mb-6">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div>
+                <h2 className="text-xl font-bold text-red-500 uppercase tracking-widest">Market Poach Event</h2>
+                <p className="text-xs text-red-400/80">A competitor is actively poaching your top talent.</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-neutral-300 mb-6">
+              The following high-performing employees have received external offers because their Comp-Ratios are below market. 
+              You may issue a massive off-cycle retention bonus (which will compound as Shadow Debt) or let them walk.
+            </p>
+
+            <div className="space-y-4 mb-8">
+              {poachTargets.map((emp) => (
+                <div key={emp.id} className="bg-neutral-900 border border-neutral-800 p-4 rounded-xl flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-white">{emp.name} ({emp.role})</div>
+                    <div className="text-xs text-neutral-400">Perf: {emp.performance} | Market: {fmtLPA(emp.marketMid)} | Current: {fmtLPA(emp.currentPay)}</div>
+                  </div>
+                  <input 
+                    type="number"
+                    placeholder="₹ Counter Offer"
+                    className="bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white w-32"
+                    value={counterOffers[emp.id] || ''}
+                    onChange={(e) => setCounterOffers(prev => ({...prev, [emp.id]: Number(e.target.value)}))}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handlePoachConfirm}
+              className="w-full py-3 bg-red-900 hover:bg-red-800 text-white rounded-xl font-semibold transition-colors"
+            >
+              Confirm Counter-Offers & Advance Round
             </button>
           </div>
         </div>

@@ -72,7 +72,9 @@ export const ONBOARDING_CONTENT: OnboardingSlide[] = [
     type: 'guide',
     paragraphs: [
       "This simulation runs across six rounds, each representing one strategic quarter at BharatQuick. Before each round, you receive a situation briefing - a narrative account of what is happening inside the company. You then enter the Command Centre, where you can access workforce data, market benchmarks, conduct confidential interviews, and submit your decisions.",
-      "Your performance is tracked through the Human Equity Score (HES) - a composite metric reflecting the cumulative health of your compensation decisions across three dimensions: talent engagement, internal pay equity, and budget efficiency. Your HES is updated after each round and is visible to your professor throughout the simulation.",
+      "Your performance is tracked through the Executive Human Equity Score (X-HES) - a composite metric reflecting the cumulative health of your compensation decisions. Your X-HES is updated after each round and is visible to your professor throughout the simulation.",
+      "CRITICAL: You are managing Political Capital. Overspending your budget, paying off-cycle cash bonuses (which compounds as Shadow Debt), or ignoring the Board will drain your capital. If your Political Capital reaches 0, you will be fired immediately and locked out of the simulation.",
+      "NOTE: The performance ratings you see on the dashboard are Manager Ratings, which have a 25% chance of being biased. You must spend Political Capital to 'HR Audit' an employee to reveal their true performance. Beware of toxic top-performers who drain team productivity—sometimes the best move is to fire them."
     ],
     levers: [
       { name: 'Merit Pool', description: 'Sets the percentage salary increase applied across the workforce, weighted by individual performance ratings.' },
