@@ -24,6 +24,7 @@ import {
   Sliders,
   Sun,
   Moon,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '@/lib/useTheme';
 import { RoundMechanics } from '@/components/RoundMechanics';
