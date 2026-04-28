@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -63,18 +63,21 @@ export default function Home() {
 
           <div>
             <label className="block text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-[0.15em] mb-2">
-              Full Name
+              Academic Email
             </label>
             <input
-              id="player-name"
-              type="text"
+              id="player-email"
+              type="email"
               required
               value={name}
               onChange={(e) => { setName(e.target.value); setError(''); }}
-              placeholder="First and Last Name"
-              autoComplete="name"
+              placeholder="name@university.edu"
+              autoComplete="email"
               className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-[var(--text)] placeholder-slate-700 text-sm outline-none focus:border-indigo-500/40 focus:bg-[var(--surface)] transition-colors"
             />
+            <p className="mt-2 text-[9px] text-[var(--text-muted)] leading-relaxed italic">
+              * Used for your performance report and to restore your progress if you reload.
+            </p>
           </div>
 
           {error && (

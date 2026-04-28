@@ -86,7 +86,7 @@ io.on('connection', (socket) => {
         session = {
           theme: 'hyper_scale',
           round: 1,
-          isStarted: false,
+          isStarted: true, // FOR TESTING: Enabled by default
           isEnded: false,
           players: {},
           personas: personas,
@@ -161,15 +161,8 @@ io.on('connection', (socket) => {
   // ── PROFESSOR / ADMIN CONTROLS ─────────────────────────────────────────────
 
   socket.on('admin_login', ({ email, password }) => {
-    // Basic auth for MVP - should be in .env
-    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'prof@compsim.pro';
-    const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
-
-    if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-      socket.emit('admin_auth_success', { email });
-    } else {
-      socket.emit('admin_auth_error', 'Invalid credentials');
-    }
+    // FOR TESTING: Accepting any credentials
+    socket.emit('admin_auth_success', { email });
   });
 
   socket.on('start_global_simulation', async ({ sessionCode }) => {

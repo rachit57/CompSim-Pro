@@ -1,59 +1,97 @@
+const nodemailer = require('nodemailer');
+
 /**
- * CompSim Pro Mailer Service
- * Handles dispatching reports to students and professors.
+ * CompSim Pro Mailer Service ($0 Setup)
+ * Uses Nodemailer with standard SMTP (e.g., Gmail, Outlook).
  */
 
-// Placeholder for Resend / Nodemailer
-// Usage: const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: process.env.EMAIL_SERVICE || 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,    // e.g. your-email@gmail.com
+    pass: process.env.EMAIL_PASSWORD // e.g. an "App Password"
+  }
+});
 
 async function sendStudentReport(email, playerName, feedback) {
-  console.log(`[MAILER] Preparing report for ${email}...`);
+  console.log(`[MAILER] Dispatching report to ${email}...`);
   
-  const msg = {
-    from: 'CompSim Pro <reports@compsim.pro>',
+  const mailOptions = {
+    from: `"CompSim Pro Platform" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: `CompSim Pro: Your Performance Report - ${playerName}`,
-    text: `Hello ${playerName},\n\nThank you for participating in the CompSim Pro Simulation.\n\n${feedback}\n\nBest Regards,\nCompSim Pro Platform`,
+    subject: `Performance Report: CompSim Pro Simulation - ${playerName}`,
+    text: `Hello ${playerName},\n\nYour compensation simulation has concluded. Below is your performance analysis and feedback:\n\n${feedback}\n\nThis report was generated automatically by the CompSim Pro Managed Platform.`,
+    // If we want a personal touch:
+    replyTo: process.env.ADMIN_EMAIL || 'prof@compsim.pro'
   };
 
-  // In production, uncomment the actual mailer call:
-  // await resend.emails.send(msg);
-  
-  console.log(`[MAILER] Report sent to ${email} (Simulation Mode)`);
-  return true;
+  try {
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+      await transporter.sendMail(mailOptions);
+      console.log(`[MAILER] Successfully sent to ${email}`);
+    } else {
+      console.log(`[MAILER] EMAIL_USER/PASS not found. Report for ${email} logged to console:`);
+      console.log(feedback);
+    }
+    return true;
+  } catch (error) {
+    console.error(`[MAILER] Error sending to ${email}:`, error.message);
+    return false;
+  }
 }
 
 async function sendProfessorSummary(profEmail, cohortStats, leaderboard) {
-  console.log(`[MAILER] Preparing cohort summary for ${profEmail}...`);
+  console.log(`[MAILER] Dispatching Cohort Summary to ${profEmail}...`);
 
   const leaderboardText = leaderboard
-    .map((p, i) => `${i+1}. ${p.email}: HES ${p.score}`)
+    .map((p, i) => `${i+1}. ${p.email}: HES ${p.score || 0}`)
     .join('\n');
 
   const text = `
-    Professor,
+    Dear Professor,
 
-    The simulation session has ended. Here is the cohort summary:
+    The simulation session has ended. Here is your cohort analytical summary:
 
-    Active Students: ${cohortStats.count}
-    Average HES Score: ${cohortStats.mean.toFixed(2)}
+    -----------------------------------------
+    COHORT STATISTICS
+    -----------------------------------------
+    Total Students: ${cohortStats.count}
+    Mean HES Score: ${cohortStats.mean.toFixed(2)}
     Standard Deviation: ${cohortStats.stdDev.toFixed(2)}
 
-    Score Distribution:
+    SCORE DISTRIBUTION
     0-40:   ${cohortStats.bins['0-40']}
     41-60:  ${cohortStats.bins['41-60']}
     61-80:  ${cohortStats.bins['61-80']}
     81-90:  ${cohortStats.bins['81-90']}
     91-100: ${cohortStats.bins['91-100']}
 
-    Top Performers:
+    TOP 10 LEADERBOARD
     ${leaderboardText}
 
-    The individual reports have been dispatched to all students.
+    All individual student reports have been dispatched.
+    -----------------------------------------
   `;
 
-  console.log(`[MAILER] Professor summary sent to ${profEmail} (Simulation Mode)`);
-  return true;
+  const mailOptions = {
+    from: `"CompSim Pro Analytics" <${process.env.EMAIL_USER}>`,
+    to: profEmail,
+    subject: `Cohort Summary: CompSim Pro Session Ended`,
+    text: text
+  };
+
+  try {
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+      await transporter.sendMail(mailOptions);
+      console.log(`[MAILER] Summary sent to Professor ${profEmail}`);
+    } else {
+      console.log(`[MAILER] EMAIL_USER/PASS not found. Professor summary logged to console.`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`[MAILER] Error sending summary to Prof:`, error.message);
+    return false;
+  }
 }
 
 module.exports = { sendStudentReport, sendProfessorSummary };

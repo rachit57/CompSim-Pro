@@ -137,24 +137,24 @@ export default function GamePage() {
     );
   }
 
-  if (!sessionData.isStarted) {
-    return (
-      <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 border border-indigo-500/20">
-          <Lock className="w-8 h-8 text-indigo-500 animate-pulse" />
-        </div>
-        <h1 className="text-2xl font-bold text-[var(--text)] mb-3 tracking-tight">Simulation Locked</h1>
-        <p className="max-w-md text-[var(--text-muted)] text-sm leading-relaxed mb-8">
-          The Professor has not started the session yet. Please stay on this screen. 
-          The simulation will begin automatically once the briefing is complete.
-        </p>
-        <div className="flex items-center gap-3 text-[10px] font-bold text-indigo-500 uppercase tracking-[0.2em] bg-indigo-500/5 px-4 py-2 rounded-full border border-indigo-500/10">
-          <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" />
-          Connected as {playerName}
-        </div>
-      </div>
-    );
-  }
+  // if (!sessionData.isStarted) {
+  //   return (
+  //     <div className="min-h-screen bg-[var(--bg)] flex flex-col items-center justify-center p-6 text-center">
+  //       <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 border border-indigo-500/20">
+  //         <Lock className="w-8 h-8 text-indigo-500 animate-pulse" />
+  //       </div>
+  //       <h1 className="text-2xl font-bold text-[var(--text)] mb-3 tracking-tight">Simulation Locked</h1>
+  //       <p className="max-w-md text-[var(--text-muted)] text-sm leading-relaxed mb-8">
+  //         The Professor has not started the session yet. Please stay on this screen. 
+  //         The simulation will begin automatically once the briefing is complete.
+  //       </p>
+  //       <div className="flex items-center gap-3 text-[10px] font-bold text-indigo-500 uppercase tracking-[0.2em] bg-indigo-500/5 px-4 py-2 rounded-full border border-indigo-500/10">
+  //         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" />
+  //         Connected as {playerName}
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (sessionData.isEnded) {
     return (
